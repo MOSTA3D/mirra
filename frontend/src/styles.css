@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   MIRRA DESIGN TOKENS
+   All colors defined here as CSS variables.
+   Components reference tokens via Tailwind classes.
+   Adding a new theme = add a new [data-theme] block.
+   ============================================ */
+
+[data-theme="dark"] {
+  /* Backgrounds */
+  --color-bg-base: #0D0D0F;
+  --color-bg-surface: #141416;
+  --color-bg-elevated: #1C1C1F;
+  --color-bg-overlay: rgba(13, 13, 15, 0.85);
+
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --color-text-primary: #F4F4F5;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted: #71717A;
+
+  /* Accent */
+  --color-accent-start: #7C3AED;
+  --color-accent-end: #C026D3;
+  --color-accent-solid: #8B5CF6;
+
+  /* Status */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+}
+
+/* Base resets */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Gradient utilities */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
+}
