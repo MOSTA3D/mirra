@@ -1,0 +1,40 @@
+# Go
+backend/bin/
+backend/*.exe
+backend/*.test
+*.env
+
+# Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Mobile
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/local.properties
+mobile/ios/.build/
+mobile/ios/DerivedData/
+*.xcworkspace/xcuserdata/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Playwright
+screenshots/
+test-results/
+
+# Logs
+*.log
