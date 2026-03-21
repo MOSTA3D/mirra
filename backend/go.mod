@@ -1,6 +1,6 @@
 module github.com/mirra-ai/mirra/backend
 
-go 1.22.5
+go 1.25.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -14,6 +14,6 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/redis/go-redis/v9 v9.18.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )

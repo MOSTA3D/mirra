@@ -7,47 +7,47 @@ import (
 
 // User represents a registered user.
 type User struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           string    `json:"id"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"-"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 // Persona represents a distilled persona entity.
 type Persona struct {
-	ID         string
-	OwnerID    string
-	Name       string
-	Slug       string
-	Visibility string // private | public
-	Status     string // draft | processing | ready
-	Disclaimer string
-	Confidence map[string]float64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID         string             `json:"id"`
+	OwnerID    string             `json:"ownerId"`
+	Name       string             `json:"name"`
+	Slug       string             `json:"slug"`
+	Visibility string             `json:"visibility"`
+	Status     string             `json:"status"`
+	Disclaimer string             `json:"disclaimer"`
+	Confidence map[string]float64 `json:"confidence"`
+	CreatedAt  time.Time          `json:"createdAt"`
+	UpdatedAt  time.Time          `json:"updatedAt"`
 }
 
 // Source represents a data source attached to a persona.
 type Source struct {
-	ID        string
-	PersonaID string
-	Type      string // url | pdf | text
-	Content   string
-	Status    string // pending | processed | failed
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	PersonaID string    `json:"personaId"`
+	Type      string    `json:"type"`
+	Content   string    `json:"content"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // Job represents an async processing job.
 type Job struct {
-	ID          string
-	PersonaID   string
-	OwnerID     string
-	Status      string // queued | running | done | failed
-	CurrentStep string // ingest | extract | distill | score
-	ErrorLog    string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string    `json:"id"`
+	PersonaID   string    `json:"personaId"`
+	OwnerID     string    `json:"ownerId"`
+	Status      string    `json:"status"`
+	CurrentStep string    `json:"currentStep"`
+	ErrorLog    string    `json:"errorLog,omitempty"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // UserStore defines user persistence operations.

@@ -2,22 +2,26 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/mirra-ai/mirra/backend/internal/store"
 	"github.com/mirra-ai/mirra/backend/pkg/config"
 	"github.com/mirra-ai/mirra/backend/pkg/response"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Handler handles authentication endpoints.
 type Handler struct {
-	cfg *config.Config
+	cfg   *config.Config
+	users store.UserStore
 }
 
-func NewHandler(cfg *config.Config) *Handler {
-	return &Handler{cfg: cfg}
+func NewHandler(cfg *config.Config, users store.UserStore) *Handler {
+	return &Handler{cfg: cfg, users: users}
 }
 
 type registerRequest struct {
@@ -31,13 +35,12 @@ type loginRequest struct {
 }
 
 type tokenResponse struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	ExpiresIn    int    `json:"expiresIn"`
+	AccessToken string `json:"accessToken"`
+	ExpiresIn   int    `json:"expiresIn"`
+	UserID      string `json:"userId"`
 }
 
 // Register creates a new user account.
-// TODO: persist to database
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -50,10 +53,36 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Stub: generate a user ID and return tokens
-	// Real implementation will hash password, persist user, check uniqueness
-	userID := uuid.NewString()
-	tokens, err := h.generateTokens(userID)
+	if len(req.Password) < 8 {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Password must be at least 8 characters")
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to process password")
+		return
+	}
+
+	now := time.Now().UTC()
+	user := &store.User{
+		ID:           uuid.NewString(),
+		Email:        req.Email,
+		PasswordHash: string(hash),
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	if err := h.users.Create(r.Context(), user); err != nil {
+		if errors.Is(err, store.ErrAlreadyExists) {
+			response.Err(w, http.StatusConflict, "EMAIL_TAKEN", "An account with this email already exists")
+			return
+		}
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create account")
+		return
+	}
+
+	tokens, err := h.generateTokens(user.ID)
 	if err != nil {
 		response.Err(w, http.StatusInternalServerError, "TOKEN_ERROR", "Failed to generate tokens")
 		return
@@ -63,7 +92,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login authenticates an existing user.
-// TODO: validate against database
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -76,10 +104,19 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Stub: return tokens for any valid-looking request
-	// Real implementation will look up user, verify password hash
-	userID := uuid.NewString()
-	tokens, err := h.generateTokens(userID)
+	user, err := h.users.GetByEmail(r.Context(), req.Email)
+	if err != nil {
+		// Return same error for not found and wrong password — don't leak which one
+		response.Err(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		response.Err(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
+		return
+	}
+
+	tokens, err := h.generateTokens(user.ID)
 	if err != nil {
 		response.Err(w, http.StatusInternalServerError, "TOKEN_ERROR", "Failed to generate tokens")
 		return
@@ -88,22 +125,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, tokens)
 }
 
-// Refresh issues a new access token from a valid refresh token.
-// TODO: validate refresh token from store
+// Refresh — placeholder for refresh token flow
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		response.Err(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body")
-		return
-	}
-
 	response.Err(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Refresh endpoint coming soon")
 }
 
 func (h *Handler) generateTokens(userID string) (*tokenResponse, error) {
-	expiresIn := 3600 // 1 hour
+	expiresIn := 3600 * 24 // 24 hours
 
 	claims := jwt.RegisteredClaims{
 		Subject:   userID,
@@ -118,8 +146,8 @@ func (h *Handler) generateTokens(userID string) (*tokenResponse, error) {
 	}
 
 	return &tokenResponse{
-		AccessToken:  signed,
-		RefreshToken: uuid.NewString(), // Stub — real refresh tokens need a store
-		ExpiresIn:    expiresIn,
+		AccessToken: signed,
+		ExpiresIn:   expiresIn,
+		UserID:      userID,
 	}, nil
 }

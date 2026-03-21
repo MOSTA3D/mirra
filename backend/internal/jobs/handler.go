@@ -1,40 +1,61 @@
 package jobs
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mirra-ai/mirra/backend/internal/store"
 	"github.com/mirra-ai/mirra/backend/pkg/config"
+	appmiddleware "github.com/mirra-ai/mirra/backend/pkg/middleware"
 	"github.com/mirra-ai/mirra/backend/pkg/response"
 )
 
-// Handler handles job status endpoints.
 type Handler struct {
-	cfg *config.Config
+	cfg  *config.Config
+	jobs store.JobStore
 }
 
-func NewHandler(cfg *config.Config) *Handler {
-	return &Handler{cfg: cfg}
-}
-
-// Job represents an async processing job.
-type Job struct {
-	ID          string `json:"id"`
-	PersonaID   string `json:"personaId"`
-	Status      string `json:"status"` // queued | running | done | failed
-	CurrentStep string `json:"currentStep"` // ingest | extract | distill | score
-	ErrorLog    string `json:"errorLog,omitempty"`
+func NewHandler(cfg *config.Config, jobs store.JobStore) *Handler {
+	return &Handler{cfg: cfg, jobs: jobs}
 }
 
 // List returns all jobs for the authenticated user.
-// TODO: query from database
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	response.JSON(w, http.StatusOK, []Job{})
+	userID := appmiddleware.GetUserID(r)
+
+	jobs, err := h.jobs.ListByOwner(r.Context(), userID)
+	if err != nil {
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to fetch jobs")
+		return
+	}
+
+	if jobs == nil {
+		jobs = []*store.Job{}
+	}
+
+	response.JSON(w, http.StatusOK, jobs)
 }
 
 // Get returns a single job by ID.
-// TODO: query from database, check ownership
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	userID := appmiddleware.GetUserID(r)
 	id := chi.URLParam(r, "id")
-	response.Err(w, http.StatusNotFound, "JOB_NOT_FOUND", "Job "+id+" not found")
+
+	job, err := h.jobs.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			response.Err(w, http.StatusNotFound, "JOB_NOT_FOUND", "Job not found")
+			return
+		}
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to fetch job")
+		return
+	}
+
+	if job.OwnerID != userID {
+		response.Err(w, http.StatusNotFound, "JOB_NOT_FOUND", "Job not found")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, job)
 }
