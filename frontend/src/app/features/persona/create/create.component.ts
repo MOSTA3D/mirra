@@ -93,18 +93,30 @@ export class CreatePersonaComponent {
     const id = this.personaId();
     const srcs = this.sources();
 
-    // Submit all sources sequentially
-    for (const src of srcs) {
-      await new Promise<void>((resolve, reject) => {
-        this.personaService.addSource(id, { type: src.type, content: src.content }).subscribe({
+    try {
+      // Submit all sources sequentially
+      for (const src of srcs) {
+        await new Promise<void>((resolve, reject) => {
+          this.personaService.addSource(id, { type: src.type, content: src.content }).subscribe({
+            next: () => resolve(),
+            error: (e) => reject(e),
+          });
+        });
+      }
+
+      // Trigger processing pipeline
+      await new Promise<void>((resolve) => {
+        this.personaService.process(id).subscribe({
           next: () => resolve(),
-          error: (e) => reject(e),
+          error: () => resolve(), // Non-fatal — navigate anyway
         });
       });
-    }
 
-    this.loading.set(false);
-    this.router.navigate(['/persona', id]);
+      this.router.navigate(['/persona', id]);
+    } catch (err: any) {
+      this.error.set(err?.error?.error?.message ?? 'Failed to submit sources');
+      this.loading.set(false);
+    }
   }
 
   sourceTypeLabel(type: SourceType): string {

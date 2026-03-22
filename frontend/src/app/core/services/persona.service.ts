@@ -58,6 +58,10 @@ export class PersonaService {
     return this.http.post<{ data: Source }>(`${environment.apiUrl}/personas/${personaId}/sources`, dto);
   }
 
+  process(personaId: string) {
+    return this.http.post<{ data: { message: string; status: string } }>(`${environment.apiUrl}/personas/${personaId}/process`, {});
+  }
+
   export(personaId: string) {
     return this.http.post<{ data: { content: string } }>(`${environment.apiUrl}/personas/${personaId}/export`, {});
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { PersonaService, Persona } from '../../../core/services/persona.service';
@@ -10,12 +10,15 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
   imports: [RouterLink, ButtonComponent, DatePipe],
   templateUrl: './detail.component.html',
 })
-export class PersonaDetailComponent implements OnInit {
+export class PersonaDetailComponent implements OnInit, OnDestroy {
   persona = signal<Persona | null>(null);
   loading = signal(true);
   exportContent = signal('');
   exporting = signal(false);
   copied = signal(false);
+
+  private personaId = '';
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -23,14 +26,41 @@ export class PersonaDetailComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id')!;
-    this.personaService.get(id).subscribe({
+    this.personaId = this.route.snapshot.paramMap.get('id')!;
+    this.loadPersona();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
+  }
+
+  loadPersona() {
+    this.personaService.get(this.personaId).subscribe({
       next: (res) => {
         this.persona.set(res.data);
         this.loading.set(false);
+
+        if (res.data.status === 'processing') {
+          this.startPolling();
+        } else if (res.data.status === 'ready') {
+          this.stopPolling();
+          this.exportPersona(); // auto-load export when ready
+        }
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  startPolling() {
+    if (this.pollInterval) return;
+    this.pollInterval = setInterval(() => this.loadPersona(), 2000);
+  }
+
+  stopPolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
   }
 
   exportPersona() {
