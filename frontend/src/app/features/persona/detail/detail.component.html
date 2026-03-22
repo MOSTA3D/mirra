@@ -198,13 +198,15 @@
           }
         </div>
 
-        <!-- Right: Confidence -->
+        <!-- Right: Confidence + Sources -->
         <div class="flex flex-col gap-4">
+
+          <!-- Confidence -->
           <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
             <h2 class="text-sm font-semibold mb-5" style="color: var(--color-text-secondary)">CONFIDENCE</h2>
             @if (confidenceDimensions(persona()!.confidence).length === 0) {
               <p class="text-sm" style="color: var(--color-text-muted)">
-                Build the persona to see confidence scores per dimension.
+                Build the persona to see confidence scores.
               </p>
             } @else {
               <div class="flex flex-col gap-4">
@@ -226,6 +228,51 @@
               </div>
             }
           </div>
+
+          <!-- Sources list -->
+          <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-semibold" style="color: var(--color-text-secondary)">
+                SOURCES ({{ sources().length }})
+              </h2>
+              @if (persona()!.status !== 'processing') {
+                <button
+                  (click)="showAddSource.set(!showAddSource())"
+                  class="text-xs px-2 py-1 rounded-lg border transition-all"
+                  style="border-color: var(--color-border-strong); color: var(--color-accent-solid)">
+                  + Add
+                </button>
+              }
+            </div>
+
+            @if (sources().length === 0) {
+              <p class="text-xs" style="color: var(--color-text-muted)">No sources yet. Add some to build the persona.</p>
+            } @else {
+              <div class="flex flex-col gap-2">
+                @for (src of sources(); track src.id) {
+                  <div class="flex items-start gap-2 p-3 rounded-xl" style="background-color: var(--color-bg-elevated)">
+                    <span class="text-xs px-1.5 py-0.5 rounded border shrink-0 mt-0.5"
+                          style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+                      {{ src.type }}
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs truncate" style="color: var(--color-text-secondary)">
+                        {{ src.content }}
+                      </p>
+                      @if (src.speakerName) {
+                        <p class="text-xs mt-0.5" style="color: var(--color-text-muted)">Speaker: {{ src.speakerName }}</p>
+                      }
+                    </div>
+                    <span class="text-xs shrink-0 mt-0.5"
+                          [style.color]="src.status === 'processed' ? 'var(--color-success)' : 'var(--color-text-muted)'">
+                      {{ src.status === 'processed' ? '✓' : '○' }}
+                    </span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
         </div>
       </div>
     }

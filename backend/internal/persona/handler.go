@@ -250,6 +250,36 @@ func (h *Handler) AddSource(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusCreated, src)
 }
 
+// ListSources returns all sources attached to a persona.
+func (h *Handler) ListSources(w http.ResponseWriter, r *http.Request) {
+	userID := appmiddleware.GetUserID(r)
+	personaID := chi.URLParam(r, "id")
+
+	p, err := h.personas.GetByID(r.Context(), personaID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			response.Err(w, http.StatusNotFound, "PERSONA_NOT_FOUND", "Persona not found")
+			return
+		}
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to fetch persona")
+		return
+	}
+	if p.OwnerID != userID {
+		response.Err(w, http.StatusNotFound, "PERSONA_NOT_FOUND", "Persona not found")
+		return
+	}
+
+	sources, err := h.personas.ListSources(r.Context(), personaID)
+	if err != nil {
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to fetch sources")
+		return
+	}
+	if sources == nil {
+		sources = []*store.Source{}
+	}
+	response.JSON(w, http.StatusOK, sources)
+}
+
 // Process triggers the distillation pipeline for a persona.
 // It runs asynchronously and immediately returns the updated persona status.
 func (h *Handler) Process(w http.ResponseWriter, r *http.Request) {

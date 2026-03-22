@@ -20,6 +20,7 @@ export interface Source {
   personaId: string;
   type: 'url' | 'pdf' | 'text';
   content: string;
+  speakerName?: string;
   status: 'pending' | 'processed' | 'failed';
   createdAt: string;
 }
@@ -53,6 +54,10 @@ export class PersonaService {
 
   get(id: string) {
     return this.http.get<{ data: Persona }>(`${environment.apiUrl}/personas/${id}`);
+  }
+
+  getSources(personaId: string) {
+    return this.http.get<{ data: Source[] }>(`${environment.apiUrl}/personas/${personaId}/sources`);
   }
 
   addSource(personaId: string, dto: AddSourceDto) {

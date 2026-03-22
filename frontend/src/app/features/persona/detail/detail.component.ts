@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { PersonaService, Persona } from '../../../core/services/persona.service';
+import { PersonaService, Persona, Source } from '../../../core/services/persona.service';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { FileUploadComponent } from '../../../shared/components/file-upload/file-upload.component';
 
@@ -24,6 +24,7 @@ const SOURCE_LABELS: Record<string, string> = {
 })
 export class PersonaDetailComponent implements OnInit, OnDestroy {
   persona = signal<Persona | null>(null);
+  sources = signal<Source[]>([]);
   loading = signal(true);
   exportContent = signal('');
   exporting = signal(false);
@@ -67,8 +68,16 @@ export class PersonaDetailComponent implements OnInit, OnDestroy {
           this.stopPolling();
           if (!this.exportContent()) this.exportPersona();
         }
+        this.loadSources();
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  loadSources() {
+    this.personaService.getSources(this.personaId).subscribe({
+      next: (res) => this.sources.set(res.data ?? []),
+      error: () => {},
     });
   }
 
@@ -113,6 +122,7 @@ export class PersonaDetailComponent implements OnInit, OnDestroy {
         this.speakerName.set('');
         this.addingSource.set(false);
         this.showAddSource.set(false);
+        this.loadSources();
       },
       error: (err) => {
         this.addSourceError.set(err?.error?.error?.message ?? 'Failed to add source');
