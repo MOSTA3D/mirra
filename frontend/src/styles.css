@@ -4,33 +4,21 @@
 
 /* ============================================
    MIRRA DESIGN TOKENS
-   All colors defined here as CSS variables.
-   Components reference tokens via Tailwind classes.
-   Adding a new theme = add a new [data-theme] block.
    ============================================ */
 
 [data-theme="dark"] {
-  /* Backgrounds */
   --color-bg-base: #0D0D0F;
   --color-bg-surface: #141416;
   --color-bg-elevated: #1C1C1F;
   --color-bg-overlay: rgba(13, 13, 15, 0.85);
-
-  /* Borders */
   --color-border: rgba(255, 255, 255, 0.06);
   --color-border-strong: rgba(255, 255, 255, 0.12);
-
-  /* Text */
   --color-text-primary: #F4F4F5;
   --color-text-secondary: #A1A1AA;
   --color-text-muted: #71717A;
-
-  /* Accent */
   --color-accent-start: #7C3AED;
   --color-accent-end: #C026D3;
   --color-accent-solid: #8B5CF6;
-
-  /* Status */
   --color-success: #22C55E;
   --color-warning: #F59E0B;
   --color-error: #EF4444;
@@ -38,9 +26,7 @@
 }
 
 /* Base resets */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
 html {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -64,4 +50,30 @@ body {
 
 .gradient-accent {
   background: linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end));
+}
+
+/* ============================================
+   THIN ACCENT SCROLLBAR — global
+   ============================================ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-accent-solid) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-accent-solid);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-start);
 }
