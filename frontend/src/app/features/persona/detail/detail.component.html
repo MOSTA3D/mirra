@@ -2,8 +2,8 @@
 
   <!-- Nav -->
   <nav class="border-b px-8 py-4 flex items-center gap-4" style="border-color: var(--color-border); background-color: var(--color-bg-surface)">
-    <a routerLink="/dashboard" class="text-sm transition-colors" style="color: var(--color-text-muted)">← Dashboard</a>
-    <span class="text-sm" style="color: var(--color-border-strong)">/</span>
+    <a routerLink="/dashboard" class="text-sm" style="color: var(--color-text-muted)">← Dashboard</a>
+    <span style="color: var(--color-border-strong)">/</span>
     <span class="text-sm font-medium" style="color: var(--color-text-secondary)">{{ persona()?.name ?? '...' }}</span>
   </nav>
 
@@ -19,13 +19,14 @@
     @else if (!persona()) {
       <div class="text-center py-24">
         <p style="color: var(--color-text-muted)">Persona not found.</p>
-        <a routerLink="/dashboard" class="mt-4 inline-block text-sm" style="color: var(--color-accent-solid)">Back to dashboard</a>
+        <a routerLink="/dashboard" class="mt-4 inline-block text-sm" style="color: var(--color-accent-solid)">← Back</a>
       </div>
     }
 
     @else {
+
       <!-- Header -->
-      <div class="flex items-start justify-between mb-10">
+      <div class="flex items-start justify-between mb-8">
         <div>
           <div class="flex items-center gap-3 mb-2">
             <h1 class="text-2xl font-bold" style="color: var(--color-text-primary)">{{ persona()!.name }}</h1>
@@ -33,68 +34,177 @@
                   style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
               {{ persona()!.visibility }}
             </span>
+            <!-- Status badge -->
+            @if (persona()!.status === 'draft') {
+              <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: rgba(113,113,122,0.15); color: var(--color-text-muted)">Draft</span>
+            } @else if (persona()!.status === 'processing') {
+              <span class="text-xs px-2 py-0.5 rounded-full animate-pulse" style="background-color: rgba(245,158,11,0.15); color: var(--color-warning)">Processing…</span>
+            } @else {
+              <span class="text-xs px-2 py-0.5 rounded-full" style="background-color: rgba(34,197,94,0.15); color: var(--color-success)">Ready</span>
+            }
           </div>
           <p class="text-sm" style="color: var(--color-text-muted)">
-            {{ persona()!.slug }} · Created {{ persona()!.createdAt | date:'MMM d, y' }}
+            Created {{ persona()!.createdAt | date:'MMM d, y' }}
           </p>
         </div>
-        <app-button [loading]="exporting()" (click)="exportPersona()">
-          Export MD
-        </app-button>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-3">
+          @if (persona()!.status !== 'processing') {
+            <button
+              (click)="showAddSource.set(!showAddSource())"
+              class="px-4 py-2 rounded-xl text-sm font-medium border transition-all"
+              style="border-color: var(--color-border-strong); color: var(--color-text-secondary)">
+              {{ showAddSource() ? '✕ Cancel' : '+ Add source' }}
+            </button>
+          }
+          @if (persona()!.status === 'ready') {
+            <app-button [loading]="exporting()" (click)="exportPersona()">
+              Export MD
+            </app-button>
+          }
+          @if (persona()!.status === 'draft') {
+            <app-button [loading]="rebuilding()" (click)="rebuild()">
+              Build Persona 🪞
+            </app-button>
+          }
+          @if (persona()!.status === 'ready') {
+            <app-button variant="secondary" [loading]="rebuilding()" (click)="rebuild()"
+              class="border" style="border-color: var(--color-border-strong); color: var(--color-text-secondary)">
+              Rebuild
+            </app-button>
+          }
+        </div>
+      </div>
+
+      <!-- Add source panel -->
+      @if (showAddSource()) {
+        <div class="mb-8 p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-accent-solid)">
+          <h2 class="text-sm font-semibold mb-4" style="color: var(--color-text-primary)">Add a source</h2>
+
+          <!-- Type tabs -->
+          <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
+            @for (t of sourceTypes; track t) {
+              <button
+                (click)="activeSourceType.set(t)"
+                class="px-3 py-1.5 rounded-xl text-xs font-medium border whitespace-nowrap shrink-0 transition-all"
+                [style.border-color]="activeSourceType() === t ? 'var(--color-accent-solid)' : 'var(--color-border-strong)'"
+                [style.color]="activeSourceType() === t ? 'var(--color-accent-solid)' : 'var(--color-text-muted)'"
+                [style.background-color]="activeSourceType() === t ? 'rgba(139,92,246,0.08)' : 'transparent'">
+                {{ sourceLabel(t) }}
+              </button>
+            }
+          </div>
+
+          <!-- Speaker name for chats -->
+          @if (isChatFormat(activeSourceType())) {
+            <input type="text"
+              [value]="speakerName()"
+              (input)="speakerName.set($any($event.target).value)"
+              placeholder="Target person's name in this chat"
+              class="w-full px-4 py-3 rounded-xl text-sm outline-none border mb-3"
+              style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+            />
+          }
+
+          <!-- Input -->
+          @if (isFileFormat(activeSourceType())) {
+            <app-file-upload (fileLoaded)="onFileLoaded($event)" />
+          } @else if (activeSourceType() === 'url') {
+            <input type="url"
+              [value]="sourceContent()"
+              (input)="sourceContent.set($any($event.target).value)"
+              placeholder="https://..."
+              class="w-full px-4 py-3 rounded-xl text-sm outline-none border"
+              style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+            />
+          } @else {
+            <textarea
+              [value]="sourceContent()"
+              (input)="sourceContent.set($any($event.target).value)"
+              placeholder="Paste text content..."
+              rows="5"
+              class="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none border"
+              style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+            ></textarea>
+          }
+
+          @if (addSourceError()) {
+            <p class="mt-2 text-xs" style="color: var(--color-error)">{{ addSourceError() }}</p>
+          }
+
+          <div class="flex items-center gap-3 mt-4">
+            <app-button [loading]="addingSource()" [disabled]="!sourceContent().trim()" (click)="addSource()">
+              Add source
+            </app-button>
+            @if (persona()!.status === 'ready') {
+              <p class="text-xs" style="color: var(--color-text-muted)">
+                Adding a source won't rebuild automatically — click <strong>Rebuild</strong> when ready.
+              </p>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Disclaimer -->
+      <div class="px-5 py-4 rounded-2xl border text-sm leading-relaxed mb-6"
+           style="background-color: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.15); color: var(--color-text-muted)">
+        ⚠️ {{ persona()!.disclaimer }}
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Left: Persona info -->
+        <!-- Left: Main content -->
         <div class="lg:col-span-2 flex flex-col gap-6">
 
-          <!-- Status card -->
-          <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
-            <h2 class="text-sm font-semibold mb-4" style="color: var(--color-text-secondary)">STATUS</h2>
-            <div class="flex items-center gap-3">
-              @if (persona()!.status === 'draft') {
-                <span class="w-2.5 h-2.5 rounded-full" style="background-color: var(--color-text-muted)"></span>
-                <span style="color: var(--color-text-muted)">Draft — add sources and submit to build</span>
-              } @else if (persona()!.status === 'processing') {
-                <span class="w-2.5 h-2.5 rounded-full animate-pulse" style="background-color: var(--color-warning)"></span>
-                <span style="color: var(--color-warning)">Processing...</span>
-              } @else {
-                <span class="w-2.5 h-2.5 rounded-full" style="background-color: var(--color-success)"></span>
-                <span style="color: var(--color-success)">Ready</span>
-              }
+          <!-- Draft CTA -->
+          @if (persona()!.status === 'draft') {
+            <div class="p-6 rounded-2xl border text-center" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+              <p class="text-4xl mb-3">🪞</p>
+              <h3 class="text-base font-semibold mb-2" style="color: var(--color-text-primary)">Ready to build?</h3>
+              <p class="text-sm mb-5" style="color: var(--color-text-muted)">Add your sources above, then hit Build to generate the persona.</p>
+              <app-button [loading]="rebuilding()" (click)="rebuild()">
+                Build Persona 🪞
+              </app-button>
             </div>
-          </div>
+          }
 
-          <!-- Disclaimer -->
-          <div class="px-5 py-4 rounded-2xl border text-sm leading-relaxed"
-               style="background-color: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.15); color: var(--color-text-muted)">
-            ⚠️ {{ persona()!.disclaimer }}
-          </div>
+          <!-- Processing state -->
+          @if (persona()!.status === 'processing') {
+            <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-5 h-5 border-2 rounded-full animate-spin shrink-0"
+                     style="border-color: var(--color-border-strong); border-top-color: var(--color-accent-solid)"></div>
+                <span class="text-sm font-medium" style="color: var(--color-warning)">Building your persona…</span>
+              </div>
+              <p class="text-xs" style="color: var(--color-text-muted)">This usually takes 5–10 seconds. Page will update automatically.</p>
+            </div>
+          }
 
           <!-- Export output -->
           @if (exportContent()) {
             <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="text-sm font-semibold" style="color: var(--color-text-secondary)">EXPORTED PERSONA</h2>
-                <button (click)="copyToClipboard()" class="text-xs px-3 py-1.5 rounded-lg border transition-all"
-                        style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+                <button (click)="copyToClipboard()"
+                  class="text-xs px-3 py-1.5 rounded-lg border transition-all"
+                  style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
                   {{ copied() ? '✓ Copied!' : 'Copy' }}
                 </button>
               </div>
-              <pre class="text-xs leading-relaxed whitespace-pre-wrap overflow-auto max-h-80"
+              <pre class="text-xs leading-relaxed whitespace-pre-wrap overflow-auto max-h-96"
                    style="color: var(--color-text-secondary); font-family: 'JetBrains Mono', monospace">{{ exportContent() }}</pre>
             </div>
           }
         </div>
 
-        <!-- Right: Confidence scores -->
+        <!-- Right: Confidence -->
         <div class="flex flex-col gap-4">
           <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
             <h2 class="text-sm font-semibold mb-5" style="color: var(--color-text-secondary)">CONFIDENCE</h2>
-
             @if (confidenceDimensions(persona()!.confidence).length === 0) {
               <p class="text-sm" style="color: var(--color-text-muted)">
-                Not yet processed. Submit sources to generate confidence scores.
+                Build the persona to see confidence scores per dimension.
               </p>
             } @else {
               <div class="flex flex-col gap-4">
