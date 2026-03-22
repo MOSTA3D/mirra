@@ -9,19 +9,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/mirra-ai/mirra/backend/internal/store"
+	"github.com/mirra-ai/mirra/backend/internal/verification"
 	"github.com/mirra-ai/mirra/backend/pkg/config"
 	"github.com/mirra-ai/mirra/backend/pkg/response"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Handler handles authentication endpoints.
 type Handler struct {
-	cfg   *config.Config
-	users store.UserStore
+	cfg          *config.Config
+	users        store.UserStore
+	verification *verification.Store
 }
 
-func NewHandler(cfg *config.Config, users store.UserStore) *Handler {
-	return &Handler{cfg: cfg, users: users}
+func NewHandler(cfg *config.Config, users store.UserStore, vs *verification.Store) *Handler {
+	return &Handler{cfg: cfg, users: users, verification: vs}
 }
 
 type registerRequest struct {
@@ -34,13 +35,69 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type sendCodeRequest struct {
+	Email string `json:"email"`
+}
+
+type verifyCodeRequest struct {
+	Email string `json:"email"`
+	Code  string `json:"code"`
+}
+
 type tokenResponse struct {
 	AccessToken string `json:"accessToken"`
 	ExpiresIn   int    `json:"expiresIn"`
 	UserID      string `json:"userId"`
 }
 
-// Register creates a new user account.
+// SendVerificationCode sends a code to the given email.
+func (h *Handler) SendVerificationCode(w http.ResponseWriter, r *http.Request) {
+	var req sendCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Err(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body")
+		return
+	}
+	if req.Email == "" {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email is required")
+		return
+	}
+
+	if _, err := h.verification.Issue(r.Context(), req.Email); err != nil {
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to send verification code")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, map[string]string{
+		"message": "Verification code sent to " + req.Email,
+	})
+}
+
+// VerifyCode validates a code submitted by the user.
+func (h *Handler) VerifyCode(w http.ResponseWriter, r *http.Request) {
+	var req verifyCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Err(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body")
+		return
+	}
+	if req.Email == "" || req.Code == "" {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email and code are required")
+		return
+	}
+
+	if err := h.verification.Verify(r.Context(), req.Email, req.Code); err != nil {
+		var ve *verification.VerificationError
+		if errors.As(err, &ve) {
+			response.Err(w, http.StatusBadRequest, ve.Code, ve.Message)
+			return
+		}
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Verification failed")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, map[string]string{"message": "Email verified successfully"})
+}
+
+// Register creates a new user account (requires prior email verification).
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -52,7 +109,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email and password are required")
 		return
 	}
-
 	if len(req.Password) < 8 {
 		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Password must be at least 8 characters")
 		return
@@ -98,7 +154,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		response.Err(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body")
 		return
 	}
-
 	if req.Email == "" || req.Password == "" {
 		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email and password are required")
 		return
@@ -106,7 +161,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.users.GetByEmail(r.Context(), req.Email)
 	if err != nil {
-		// Return same error for not found and wrong password — don't leak which one
 		response.Err(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	}
@@ -125,29 +179,21 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, tokens)
 }
 
-// Refresh — placeholder for refresh token flow
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	response.Err(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Refresh endpoint coming soon")
 }
 
 func (h *Handler) generateTokens(userID string) (*tokenResponse, error) {
-	expiresIn := 3600 * 24 // 24 hours
-
+	expiresIn := 3600 * 24
 	claims := jwt.RegisteredClaims{
 		Subject:   userID,
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expiresIn) * time.Second)),
 	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString([]byte(h.cfg.JWTSecret))
 	if err != nil {
 		return nil, err
 	}
-
-	return &tokenResponse{
-		AccessToken: signed,
-		ExpiresIn:   expiresIn,
-		UserID:      userID,
-	}, nil
+	return &tokenResponse{AccessToken: signed, ExpiresIn: expiresIn, UserID: userID}, nil
 }

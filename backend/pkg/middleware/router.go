@@ -20,6 +20,8 @@ type AuthRoutes interface {
 	Register(w http.ResponseWriter, r *http.Request)
 	Login(w http.ResponseWriter, r *http.Request)
 	Refresh(w http.ResponseWriter, r *http.Request)
+	SendVerificationCode(w http.ResponseWriter, r *http.Request)
+	VerifyCode(w http.ResponseWriter, r *http.Request)
 }
 
 type PersonaRoutes interface {
@@ -63,6 +65,8 @@ func NewRouter(cfg *config.Config, h Handlers) http.Handler {
 			r.Post("/register", h.Auth.Register)
 			r.Post("/login", h.Auth.Login)
 			r.Post("/refresh", h.Auth.Refresh)
+			r.Post("/send-code", h.Auth.SendVerificationCode)
+			r.Post("/verify-code", h.Auth.VerifyCode)
 		})
 
 		// Protected routes

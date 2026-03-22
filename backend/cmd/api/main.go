@@ -16,6 +16,7 @@ import (
 	"github.com/mirra-ai/mirra/backend/internal/pipeline"
 	"github.com/mirra-ai/mirra/backend/internal/store"
 	"github.com/mirra-ai/mirra/backend/internal/store/memory"
+	"github.com/mirra-ai/mirra/backend/internal/verification"
 	"github.com/mirra-ai/mirra/backend/pkg/config"
 	"github.com/mirra-ai/mirra/backend/pkg/middleware"
 )
@@ -26,7 +27,8 @@ func main() {
 	cfg := config.Load()
 	stores := buildStores(cfg)
 	runner := pipeline.NewRunner(stores)
-	router := buildRouter(cfg, stores, runner)
+	vs := verification.NewStore()
+	router := buildRouter(cfg, stores, runner, vs)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -71,9 +73,9 @@ func buildStores(cfg *config.Config) store.Stores {
 	}
 }
 
-func buildRouter(cfg *config.Config, stores store.Stores, runner *pipeline.Runner) http.Handler {
+func buildRouter(cfg *config.Config, stores store.Stores, runner *pipeline.Runner, vs *verification.Store) http.Handler {
 	handlers := middleware.Handlers{
-		Auth:    auth.NewHandler(cfg, stores.Users),
+		Auth:    auth.NewHandler(cfg, stores.Users, vs),
 		Persona: persona.NewHandler(cfg, stores.Personas, runner),
 		Jobs:    jobs.NewHandler(cfg, stores.Jobs),
 	}
