@@ -13,6 +13,7 @@ import (
 	"github.com/mirra-ai/mirra/backend/internal/auth"
 	"github.com/mirra-ai/mirra/backend/internal/jobs"
 	"github.com/mirra-ai/mirra/backend/internal/persona"
+	"github.com/mirra-ai/mirra/backend/internal/pipeline"
 	"github.com/mirra-ai/mirra/backend/internal/store"
 	"github.com/mirra-ai/mirra/backend/internal/store/memory"
 	"github.com/mirra-ai/mirra/backend/pkg/config"
@@ -24,7 +25,8 @@ func main() {
 
 	cfg := config.Load()
 	stores := buildStores(cfg)
-	router := buildRouter(cfg, stores)
+	runner := pipeline.NewRunner(stores)
+	router := buildRouter(cfg, stores, runner)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -46,23 +48,17 @@ func main() {
 
 	<-quit
 	log.Println("Shutting down gracefully...")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Forced shutdown: %v", err)
 	}
 	log.Println("Server stopped")
 }
 
-// buildStores wires the correct store implementation based on DB_DRIVER config.
-// memory → no setup required, data lost on restart (dev/test)
-// postgres → requires DATABASE_URL (prod)
 func buildStores(cfg *config.Config) store.Stores {
 	switch cfg.DBDriver {
 	case "postgres":
-		// postgres implementation coming — falls through to memory for now
 		log.Println("WARNING: postgres driver not yet implemented, falling back to memory")
 		fallthrough
 	default:
@@ -75,10 +71,10 @@ func buildStores(cfg *config.Config) store.Stores {
 	}
 }
 
-func buildRouter(cfg *config.Config, stores store.Stores) http.Handler {
+func buildRouter(cfg *config.Config, stores store.Stores, runner *pipeline.Runner) http.Handler {
 	handlers := middleware.Handlers{
 		Auth:    auth.NewHandler(cfg, stores.Users),
-		Persona: persona.NewHandler(cfg, stores.Personas),
+		Persona: persona.NewHandler(cfg, stores.Personas, runner),
 		Jobs:    jobs.NewHandler(cfg, stores.Jobs),
 	}
 	return middleware.NewRouter(cfg, handlers)

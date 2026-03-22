@@ -29,6 +29,7 @@ type PersonaRoutes interface {
 	Update(w http.ResponseWriter, r *http.Request)
 	Delete(w http.ResponseWriter, r *http.Request)
 	AddSource(w http.ResponseWriter, r *http.Request)
+	Process(w http.ResponseWriter, r *http.Request)
 	Export(w http.ResponseWriter, r *http.Request)
 }
 
@@ -75,6 +76,7 @@ func NewRouter(cfg *config.Config, h Handlers) http.Handler {
 				r.Put("/{id}", h.Persona.Update)
 				r.Delete("/{id}", h.Persona.Delete)
 				r.Post("/{id}/sources", h.Persona.AddSource)
+				r.Post("/{id}/process", h.Persona.Process)
 				r.Post("/{id}/export", h.Persona.Export)
 			})
 
