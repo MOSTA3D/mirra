@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PersonaService } from '../../../core/services/persona.service';
 import { ButtonComponent } from '../../../shared/components/button/button.component';
 import { InputComponent } from '../../../shared/components/input/input.component';
+import { FileUploadComponent } from '../../../shared/components/file-upload/file-upload.component';
 
 type Step = 'name' | 'sources' | 'review';
 type SourceType = 'url' | 'text' | 'pdf' | 'whatsapp' | 'telegram' | 'twitter' | 'instagram';
@@ -30,7 +31,7 @@ const GUIDANCE: Record<string, string> = {
 @Component({
   selector: 'app-create-persona',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, ButtonComponent, InputComponent],
+  imports: [RouterLink, ReactiveFormsModule, ButtonComponent, InputComponent, FileUploadComponent],
   templateUrl: './create.component.html',
 })
 export class CreatePersonaComponent {
@@ -48,7 +49,12 @@ export class CreatePersonaComponent {
   sourceTypes: SourceType[] = ['text', 'url', 'whatsapp', 'telegram', 'twitter', 'instagram', 'pdf'];
 
   isChatFormat = (t: SourceType) => CHAT_FORMATS.includes(t);
+  isFileFormat = (t: SourceType) => ['pdf', 'twitter', 'instagram', 'telegram'].includes(t);
   guidance = (t: SourceType) => GUIDANCE[t] ?? '';
+
+  onFileLoaded(file: { name: string; content: string }) {
+    this.sourceContent.set(file.content);
+  }
 
   nameForm!: ReturnType<FormBuilder['group']>;
 

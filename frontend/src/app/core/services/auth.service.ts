@@ -6,8 +6,8 @@ import { environment } from '../../../environments/environment';
 
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
+  userId: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,6 +31,18 @@ export class AuthService {
     return this.http
       .post<{ data: AuthTokens }>(`${environment.apiUrl}/auth/register`, { email, password })
       .pipe(tap(res => this.setToken(res.data.accessToken)));
+  }
+
+  sendVerificationCode(email: string) {
+    return this.http.post<{ data: { message: string } }>(
+      `${environment.apiUrl}/auth/send-code`, { email }
+    );
+  }
+
+  verifyCode(email: string, code: string) {
+    return this.http.post<{ data: { message: string } }>(
+      `${environment.apiUrl}/auth/verify-code`, { email, code }
+    );
   }
 
   logout() {

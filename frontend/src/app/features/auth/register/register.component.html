@@ -7,48 +7,112 @@
       <p class="mt-2 text-sm" style="color: var(--color-text-muted)">Create your account</p>
     </div>
 
+    <!-- Step indicators -->
+    <div class="flex items-center justify-center gap-2 mb-8">
+      @for (s of ['email','verify','password']; track s; let i = $index) {
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+               [style.background]="stepIndex() >= i ? 'linear-gradient(135deg,var(--color-accent-start),var(--color-accent-end))' : 'var(--color-bg-elevated)'"
+               [style.color]="stepIndex() >= i ? '#fff' : 'var(--color-text-muted)'">
+            {{ i + 1 }}
+          </div>
+          @if (i < 2) {
+            <div class="w-6 h-px" style="background-color: var(--color-border-strong)"></div>
+          }
+        </div>
+      }
+    </div>
+
     <!-- Card -->
     <div class="p-8 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
 
       @if (error()) {
-        <div class="mb-5 px-4 py-3 rounded-xl text-sm border" style="background-color: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--color-error)">
+        <div class="mb-5 px-4 py-3 rounded-xl text-sm border flex items-center gap-2"
+             style="background-color: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--color-error)">
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2.5a.5.5 0 01.5.5v2a.5.5 0 01-1 0V4a.5.5 0 01.5-.5zm0 5a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
+          </svg>
           {{ error() }}
         </div>
       }
 
-      <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5">
-        <app-input
-          formControlName="email"
-          label="Email"
-          type="email"
-          placeholder="you@example.com"
-          [control]="form.get('email')"
-        />
+      <!-- Step 1: Email -->
+      @if (step() === 'email') {
+        <form [formGroup]="emailForm" (ngSubmit)="sendCode()" class="flex flex-col gap-5">
+          <app-input
+            formControlName="email"
+            label="Email address"
+            type="email"
+            placeholder="you@example.com"
+            [control]="emailForm.get('email')"
+          />
+          <app-button type="submit" [loading]="loading()" [fullWidth]="true">
+            Send verification code →
+          </app-button>
+        </form>
+      }
 
-        <app-input
-          formControlName="password"
-          label="Password"
-          type="password"
-          placeholder="Min. 8 characters"
-          [control]="form.get('password')"
-        />
+      <!-- Step 2: Verify code -->
+      @if (step() === 'verify') {
+        <div>
+          <p class="text-sm mb-5 text-center" style="color: var(--color-text-muted)">
+            We sent a 6-digit code to<br>
+            <strong style="color: var(--color-text-primary)">{{ email() }}</strong>
+          </p>
+          <form [formGroup]="codeForm" (ngSubmit)="verifyCode()" class="flex flex-col gap-5">
+            <app-input
+              formControlName="code"
+              label="Verification code"
+              placeholder="000000"
+              [control]="codeForm.get('code')"
+            />
+            <app-button type="submit" [loading]="loading()" [fullWidth]="true">
+              Verify code →
+            </app-button>
+          </form>
+          <div class="mt-4 text-center text-sm" style="color: var(--color-text-muted)">
+            Didn't receive it?
+            @if (resendCooldown() > 0) {
+              <span class="ml-1" style="color: var(--color-text-muted)">Resend in {{ resendCooldown() }}s</span>
+            } @else {
+              <button (click)="resendCode()" class="ml-1 font-medium" style="color: var(--color-accent-solid)">
+                Resend
+              </button>
+            }
+          </div>
+        </div>
+      }
 
-        <app-button type="submit" [loading]="loading()" [fullWidth]="true" class="mt-1">
-          Create account
-        </app-button>
-      </form>
+      <!-- Step 3: Password -->
+      @if (step() === 'password') {
+        <form [formGroup]="passwordForm" (ngSubmit)="register()" class="flex flex-col gap-5">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg mb-1"
+               style="background-color: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2)">
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="var(--color-success)">
+              <path d="M6 1a5 5 0 100 10A5 5 0 006 1zm2.28 3.47L5.75 7.5 3.72 5.47a.5.5 0 10-.71.71l2.38 2.38a.5.5 0 00.71 0l2.88-2.88a.5.5 0 00-.71-.71z"/>
+            </svg>
+            <span class="text-xs" style="color: var(--color-success)">{{ email() }} verified</span>
+          </div>
+          <app-input
+            formControlName="password"
+            label="Set your password"
+            type="password"
+            placeholder="Min. 8 characters"
+            [control]="passwordForm.get('password')"
+          />
+          <app-button type="submit" [loading]="loading()" [fullWidth]="true">
+            Create account
+          </app-button>
+        </form>
+      }
     </div>
 
     <!-- Footer -->
     <p class="text-center mt-6 text-sm" style="color: var(--color-text-muted)">
       Already have an account?
-      <a routerLink="/auth/login" class="font-medium ml-1" style="color: var(--color-accent-solid)">
-        Sign in
-      </a>
+      <a routerLink="/auth/login" class="font-medium ml-1" style="color: var(--color-accent-solid)">Sign in</a>
     </p>
-
-    <!-- Disclaimer -->
-    <p class="text-center mt-4 text-xs px-4" style="color: var(--color-text-muted)">
+    <p class="text-center mt-3 text-xs px-4" style="color: var(--color-text-muted)">
       By creating an account, you agree to our Terms of Service and take full responsibility for any personas you create.
     </p>
 
