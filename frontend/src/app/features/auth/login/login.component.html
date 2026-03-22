@@ -1,0 +1,49 @@
+<div class="min-h-screen flex items-center justify-center px-4" style="background-color: var(--color-bg-base)">
+  <div class="w-full max-w-sm">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <a routerLink="/" class="text-2xl font-bold text-gradient">Mirra</a>
+      <p class="mt-2 text-sm" style="color: var(--color-text-muted)">Sign in to your account</p>
+    </div>
+
+    <!-- Card -->
+    <div class="p-8 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+
+      @if (error()) {
+        <div class="mb-5 px-4 py-3 rounded-xl text-sm border" style="background-color: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--color-error)">
+          {{ error() }}
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5">
+        <app-input
+          formControlName="email"
+          label="Email"
+          type="email"
+          placeholder="you@example.com"
+        />
+
+        <app-input
+          formControlName="password"
+          label="Password"
+          type="password"
+          placeholder="••••••••"
+        />
+
+        <app-button type="submit" [loading]="loading()" [fullWidth]="true" class="mt-1">
+          Sign in
+        </app-button>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <p class="text-center mt-6 text-sm" style="color: var(--color-text-muted)">
+      Don't have an account?
+      <a routerLink="/auth/register" class="font-medium ml-1" style="color: var(--color-accent-solid)">
+        Create one
+      </a>
+    </p>
+
+  </div>
+</div>
