@@ -23,9 +23,10 @@ type Persona struct {
 	Visibility string             `json:"visibility"`
 	Status     string             `json:"status"`
 	Disclaimer string             `json:"disclaimer"`
-	Confidence map[string]float64 `json:"confidence"`
-	CreatedAt  time.Time          `json:"createdAt"`
-	UpdatedAt  time.Time          `json:"updatedAt"`
+	Confidence      map[string]float64 `json:"confidence"`
+	CachedMarkdown  string             `json:"-"` // stored export, not exposed in API
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
 }
 
 // Source represents a data source attached to a persona.

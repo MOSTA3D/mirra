@@ -1,6 +1,7 @@
 package persona
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -281,8 +282,8 @@ func (h *Handler) Process(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Launch pipeline async
-	go h.runner.Run(r.Context(), personaID, p.Name, sources)
+	// Launch pipeline async with background context (request context would cancel immediately)
+	go h.runner.Run(context.Background(), personaID, p.Name, sources)
 
 	response.JSON(w, http.StatusAccepted, map[string]string{
 		"message": "Processing started",
@@ -310,10 +311,14 @@ func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sources, _ := h.personas.ListSources(r.Context(), id)
+	// Serve cached markdown if available (includes LLM enrichment)
+	if p.Status == "ready" && p.CachedMarkdown != "" {
+		response.JSON(w, http.StatusOK, map[string]string{"content": p.CachedMarkdown, "format": "markdown"})
+		return
+	}
 
-	// If persona is ready, re-run export from stored data
-	// If not ready, return basic export
+	// Regenerate for ready personas without cache
+	sources, _ := h.personas.ListSources(r.Context(), id)
 	if p.Status == "ready" && len(sources) > 0 {
 		ingestor := pipeline.NewIngestor()
 		extractor := pipeline.NewExtractor()
@@ -327,12 +332,12 @@ func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 		signals := extractor.Extract(chunks)
 		profile := distiller.Distill(p.Name, signals)
 		md := exporter.ToMarkdown(profile)
-
 		response.JSON(w, http.StatusOK, map[string]string{"content": md, "format": "markdown"})
 		return
 	}
 
 	// Basic export for draft personas
+	sources, _ = h.personas.ListSources(r.Context(), id)
 	md := buildBasicExport(p, sources)
 	response.JSON(w, http.StatusOK, map[string]string{"content": md, "format": "markdown"})
 }

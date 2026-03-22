@@ -14,6 +14,10 @@ type PersonaProfile struct {
 	// Behavioral data — shown in lifestyle section of the export
 	Locations     []string             `json:"locations"`
 	Foods         []string             `json:"foods"`
+	// LLM enrichment fields — populated when Groq/LLM is available
+	VoiceGuide      string             `json:"voiceGuide,omitempty"`
+	LLMSystemPrompt string             `json:"llmSystemPrompt,omitempty"`
+	LLMEnriched     bool               `json:"llmEnriched"`
 }
 
 // Dimension represents a single personality/communication dimension with a score and evidence.

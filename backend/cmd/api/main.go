@@ -12,6 +12,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/mirra-ai/mirra/backend/internal/auth"
 	"github.com/mirra-ai/mirra/backend/internal/jobs"
+	"github.com/mirra-ai/mirra/backend/internal/llm"
 	"github.com/mirra-ai/mirra/backend/internal/persona"
 	"github.com/mirra-ai/mirra/backend/internal/pipeline"
 	"github.com/mirra-ai/mirra/backend/internal/store"
@@ -26,7 +27,8 @@ func main() {
 
 	cfg := config.Load()
 	stores := buildStores(cfg)
-	runner := pipeline.NewRunner(stores)
+	llmProvider := buildLLM(cfg)
+	runner := pipeline.NewRunner(stores, llmProvider)
 	vs := verification.NewStore()
 	router := buildRouter(cfg, stores, runner, vs)
 
@@ -71,6 +73,15 @@ func buildStores(cfg *config.Config) store.Stores {
 			Jobs:     memory.NewJobStore(),
 		}
 	}
+}
+
+func buildLLM(cfg *config.Config) llm.Provider {
+	if cfg.GroqAPIKey != "" {
+		log.Printf("LLM: Groq provider active (llama-3.1-8b-instant)")
+		return llm.NewGroqProvider(cfg.GroqAPIKey)
+	}
+	log.Printf("LLM: no provider configured — using rule-based distillation")
+	return nil
 }
 
 func buildRouter(cfg *config.Config, stores store.Stores, runner *pipeline.Runner, vs *verification.Store) http.Handler {

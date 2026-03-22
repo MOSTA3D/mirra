@@ -23,15 +23,30 @@ func (e *Exporter) ToMarkdown(profile *PersonaProfile) string {
 
 	// System prompt block — the key deliverable
 	b.WriteString("## System Prompt\n\n")
-	b.WriteString("_Copy this into any AI assistant to activate the persona:_\n\n")
+	if profile.LLMEnriched {
+		b.WriteString("_AI-synthesized from your sources. Copy into any AI assistant to activate the persona:_\n\n")
+	} else {
+		b.WriteString("_Copy this into any AI assistant to activate the persona:_\n\n")
+	}
 	b.WriteString("```\n")
-	b.WriteString(e.buildSystemPrompt(profile))
+	if profile.LLMEnriched && profile.LLMSystemPrompt != "" {
+		b.WriteString(profile.LLMSystemPrompt)
+	} else {
+		b.WriteString(e.buildSystemPrompt(profile))
+	}
 	b.WriteString("\n```\n\n")
 	b.WriteString("---\n\n")
 
 	// Summary
 	b.WriteString("## Persona Summary\n\n")
 	b.WriteString(profile.Summary + "\n\n")
+
+	// Voice guide (LLM only)
+	if profile.LLMEnriched && profile.VoiceGuide != "" {
+		b.WriteString("## Voice Guide\n\n")
+		b.WriteString("_How they actually sound — use this to calibrate the persona:_\n\n")
+		b.WriteString(profile.VoiceGuide + "\n\n")
+	}
 
 	// Personality dimensions
 	b.WriteString("## Personality Dimensions\n\n")

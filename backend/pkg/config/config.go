@@ -14,6 +14,7 @@ type Config struct {
 	StorageEndpoint  string
 	StorageKeyID     string
 	StorageKeySecret string
+	GroqAPIKey       string
 }
 
 func Load() *Config {
@@ -28,6 +29,7 @@ func Load() *Config {
 		StorageEndpoint:  getEnv("STORAGE_ENDPOINT", ""),
 		StorageKeyID:     getEnv("STORAGE_KEY_ID", ""),
 		StorageKeySecret: getEnv("STORAGE_KEY_SECRET", ""),
+		GroqAPIKey:       getEnv("GROQ_API_KEY", ""),
 	}
 }
 
