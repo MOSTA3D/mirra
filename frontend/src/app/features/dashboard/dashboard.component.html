@@ -1,0 +1,102 @@
+<div class="min-h-screen" style="background-color: var(--color-bg-base)">
+
+  <!-- Top nav -->
+  <nav class="border-b px-8 py-4 flex items-center justify-between" style="border-color: var(--color-border); background-color: var(--color-bg-surface)">
+    <span class="text-lg font-bold text-gradient">Mirra</span>
+    <button (click)="logout()" class="text-sm transition-colors" style="color: var(--color-text-muted)">
+      Sign out
+    </button>
+  </nav>
+
+  <!-- Content -->
+  <main class="max-w-5xl mx-auto px-6 py-12">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-10">
+      <div>
+        <h1 class="text-2xl font-bold" style="color: var(--color-text-primary)">Your Personas</h1>
+        <p class="mt-1 text-sm" style="color: var(--color-text-muted)">Build, manage, and export your persona reflections.</p>
+      </div>
+      <a routerLink="/persona/new">
+        <app-button>+ New Persona</app-button>
+      </a>
+    </div>
+
+    <!-- Loading -->
+    @if (loading()) {
+      <div class="flex items-center justify-center py-24">
+        <div class="w-8 h-8 border-2 rounded-full animate-spin" style="border-color: var(--color-border-strong); border-top-color: var(--color-accent-solid)"></div>
+      </div>
+    }
+
+    <!-- Empty state -->
+    @else if (personas().length === 0) {
+      <div class="flex flex-col items-center justify-center py-24 text-center">
+        <div class="text-5xl mb-4">🪞</div>
+        <h2 class="text-lg font-semibold mb-2" style="color: var(--color-text-primary)">No personas yet</h2>
+        <p class="text-sm mb-8 max-w-xs" style="color: var(--color-text-muted)">
+          Build your first persona by adding sources — social media, PDFs, or text.
+        </p>
+        <a routerLink="/persona/new">
+          <app-button>Build your first persona</app-button>
+        </a>
+      </div>
+    }
+
+    <!-- Persona grid -->
+    @else {
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        @for (persona of personas(); track persona.id) {
+          <a [routerLink]="['/persona', persona.id]"
+             class="block p-6 rounded-2xl border transition-all duration-200 hover:border-opacity-50 hover:-translate-y-0.5"
+             style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+
+            <!-- Status dot + visibility -->
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full" [style.background-color]="statusColor(persona.status)"></span>
+                <span class="text-xs font-medium" [style.color]="statusColor(persona.status)">
+                  {{ statusLabel(persona.status) }}
+                </span>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full border"
+                    style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+                {{ persona.visibility }}
+              </span>
+            </div>
+
+            <!-- Name -->
+            <h3 class="text-base font-semibold mb-1" style="color: var(--color-text-primary)">
+              {{ persona.name }}
+            </h3>
+            <p class="text-xs" style="color: var(--color-text-muted)">
+              {{ persona.slug }}
+            </p>
+
+            <!-- Confidence preview -->
+            @if (persona.status === 'ready') {
+              <div class="mt-4 pt-4 border-t" style="border-color: var(--color-border)">
+                <p class="text-xs mb-2" style="color: var(--color-text-muted)">Confidence</p>
+                <div class="flex gap-1">
+                  @for (dim of ['tone','humor','values']; track dim) {
+                    <div class="flex-1 h-1 rounded-full" style="background-color: var(--color-border-strong)">
+                      <div class="h-1 rounded-full gradient-accent"
+                           [style.width.%]="(persona.confidence[dim] ?? 0) * 100"></div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Date -->
+            <p class="mt-4 text-xs" style="color: var(--color-text-muted)">
+              Created {{ persona.createdAt | date:'MMM d, y' }}
+            </p>
+
+          </a>
+        }
+      </div>
+    }
+
+  </main>
+</div>

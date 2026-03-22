@@ -1,0 +1,218 @@
+<div class="min-h-screen flex flex-col" style="background-color: var(--color-bg-base)">
+
+  <!-- Top bar -->
+  <nav class="border-b px-8 py-4 flex items-center justify-between" style="border-color: var(--color-border); background-color: var(--color-bg-surface)">
+    <a routerLink="/dashboard" class="text-lg font-bold text-gradient">Mirra</a>
+    <a routerLink="/dashboard" class="text-sm" style="color: var(--color-text-muted)">Cancel</a>
+  </nav>
+
+  <!-- Step progress -->
+  <div class="flex justify-center pt-10 pb-6">
+    <div class="flex items-center gap-3">
+      @for (s of steps; track s; let i = $index) {
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                 [style.background]="stepIndex >= i ? 'linear-gradient(135deg, var(--color-accent-start), var(--color-accent-end))' : 'var(--color-bg-elevated)'"
+                 [style.color]="stepIndex >= i ? '#fff' : 'var(--color-text-muted)'">
+              {{ i + 1 }}
+            </div>
+            <span class="text-sm font-medium capitalize hidden sm:block"
+                  [style.color]="stepIndex >= i ? 'var(--color-text-primary)' : 'var(--color-text-muted)'">
+              {{ s }}
+            </span>
+          </div>
+          @if (i < steps.length - 1) {
+            <div class="w-10 h-px" style="background-color: var(--color-border-strong)"></div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <main class="flex-1 flex items-start justify-center px-6 pt-8 pb-16">
+    <div class="w-full max-w-lg">
+
+      <!-- Step 1: Name -->
+      @if (step() === 'name') {
+        <div>
+          <h1 class="text-2xl font-bold mb-2" style="color: var(--color-text-primary)">Name your persona</h1>
+          <p class="text-sm mb-8" style="color: var(--color-text-muted)">Who are you building a reflection of?</p>
+
+          @if (error()) {
+            <div class="mb-5 px-4 py-3 rounded-xl text-sm border" style="background-color: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--color-error)">
+              {{ error() }}
+            </div>
+          }
+
+          <form [formGroup]="nameForm" (ngSubmit)="createPersona()" class="flex flex-col gap-5">
+            <app-input
+              formControlName="name"
+              label="Persona name"
+              placeholder="e.g. Nicolas Cage, Elon Musk, My Digital Twin"
+            />
+
+            <div class="flex flex-col gap-2">
+              <label class="text-sm font-medium" style="color: var(--color-text-secondary)">Visibility</label>
+              <div class="flex gap-3">
+                @for (opt of [{val:'private',label:'🔒 Private'},{val:'public',label:'🌐 Public'}]; track opt.val) {
+                  <label class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-all text-sm font-medium"
+                         [style.border-color]="nameForm.value.visibility === opt.val ? 'var(--color-accent-solid)' : 'var(--color-border-strong)'"
+                         [style.color]="nameForm.value.visibility === opt.val ? 'var(--color-accent-solid)' : 'var(--color-text-muted)'"
+                         [style.background-color]="nameForm.value.visibility === opt.val ? 'rgba(139,92,246,0.08)' : 'transparent'">
+                    <input type="radio" formControlName="visibility" [value]="opt.val" class="sr-only" />
+                    {{ opt.label }}
+                  </label>
+                }
+              </div>
+            </div>
+
+            <app-button type="submit" [loading]="loading()" [fullWidth]="true" class="mt-2">
+              Continue →
+            </app-button>
+          </form>
+        </div>
+      }
+
+      <!-- Step 2: Sources -->
+      @if (step() === 'sources') {
+        <div>
+          <h1 class="text-2xl font-bold mb-2" style="color: var(--color-text-primary)">Add sources</h1>
+          <p class="text-sm mb-8" style="color: var(--color-text-muted)">
+            Provide content about <strong style="color: var(--color-text-primary)">{{ personaName() }}</strong>.
+            The more you add, the richer the persona.
+          </p>
+
+          <!-- Source type tabs -->
+          <div class="flex gap-2 mb-4">
+            @for (t of sourceTypes; track t) {
+              <button
+                (click)="activeSourceType.set(t)"
+                class="px-4 py-2 rounded-xl text-sm font-medium transition-all border"
+                [style.border-color]="activeSourceType() === t ? 'var(--color-accent-solid)' : 'var(--color-border-strong)'"
+                [style.color]="activeSourceType() === t ? 'var(--color-accent-solid)' : 'var(--color-text-muted)'"
+                [style.background-color]="activeSourceType() === t ? 'rgba(139,92,246,0.08)' : 'transparent'">
+                {{ sourceTypeLabel(t) }}
+              </button>
+            }
+          </div>
+
+          <!-- Source input -->
+          <div class="mb-3">
+            @if (activeSourceType() === 'text') {
+              <textarea
+                [value]="sourceContent()"
+                (input)="sourceContent.set($any($event.target).value)"
+                placeholder="Paste quotes, bios, interview transcripts, chat exports..."
+                rows="5"
+                class="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none border"
+                style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+              ></textarea>
+            } @else if (activeSourceType() === 'url') {
+              <input
+                type="url"
+                [value]="sourceContent()"
+                (input)="sourceContent.set($any($event.target).value)"
+                placeholder="https://twitter.com/username"
+                class="w-full px-4 py-3 rounded-xl text-sm outline-none border"
+                style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+              />
+            } @else {
+              <div class="w-full px-4 py-8 rounded-xl border text-center text-sm"
+                   style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-muted);">
+                📄 PDF upload coming soon — paste the text content for now
+              </div>
+            }
+          </div>
+
+          <button
+            (click)="addSource()"
+            [disabled]="!sourceContent().trim()"
+            class="text-sm font-medium px-4 py-2 rounded-xl border transition-all disabled:opacity-40"
+            style="border-color: var(--color-border-strong); color: var(--color-text-secondary)">
+            + Add source
+          </button>
+
+          <!-- Sources list -->
+          @if (sources().length > 0) {
+            <div class="mt-6 flex flex-col gap-2">
+              <p class="text-xs font-medium mb-1" style="color: var(--color-text-muted)">ADDED SOURCES ({{ sources().length }})</p>
+              @for (src of sources(); track $index; let i = $index) {
+                <div class="flex items-start gap-3 px-4 py-3 rounded-xl border"
+                     style="background-color: var(--color-bg-elevated); border-color: var(--color-border)">
+                  <span class="text-xs px-2 py-0.5 rounded-full border shrink-0 mt-0.5"
+                        style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+                    {{ src.type }}
+                  </span>
+                  <p class="text-sm flex-1 truncate" style="color: var(--color-text-secondary)">{{ src.content }}</p>
+                  <button (click)="removeSource(i)" class="text-xs shrink-0" style="color: var(--color-text-muted)">✕</button>
+                </div>
+              }
+            </div>
+          }
+
+          <div class="flex gap-3 mt-8">
+            <app-button variant="secondary" (click)="step.set('name')"
+              class="border" style="border-color: var(--color-border-strong); color: var(--color-text-secondary)">
+              ← Back
+            </app-button>
+            <app-button [fullWidth]="true" (click)="goToReview()" [disabled]="sources().length === 0">
+              Review & Export →
+            </app-button>
+          </div>
+        </div>
+      }
+
+      <!-- Step 3: Review -->
+      @if (step() === 'review') {
+        <div>
+          <h1 class="text-2xl font-bold mb-2" style="color: var(--color-text-primary)">Review & build</h1>
+          <p class="text-sm mb-8" style="color: var(--color-text-muted)">Confirm everything looks right before building the persona.</p>
+
+          <div class="p-6 rounded-2xl border mb-6" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-semibold" style="color: var(--color-text-primary)">{{ personaName() }}</h2>
+              <span class="text-xs px-2 py-0.5 rounded-full border"
+                    style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+                {{ nameForm.value.visibility }}
+              </span>
+            </div>
+            <p class="text-xs mb-4" style="color: var(--color-text-muted)">{{ sources().length }} source(s) added</p>
+            <div class="flex flex-col gap-2">
+              @for (src of sources(); track $index) {
+                <div class="flex items-center gap-2 text-xs" style="color: var(--color-text-secondary)">
+                  <span class="px-2 py-0.5 rounded-full border" style="border-color: var(--color-border-strong)">{{ src.type }}</span>
+                  <span class="truncate">{{ src.content }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Disclaimer -->
+          <div class="px-4 py-3 rounded-xl border mb-8 text-xs leading-relaxed"
+               style="background-color: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.2); color: var(--color-text-muted)">
+            ⚠️ This persona is an AI-generated approximation. Not affiliated with or endorsed by the real person. You are responsible for how you use it.
+          </div>
+
+          @if (error()) {
+            <div class="mb-5 px-4 py-3 rounded-xl text-sm border" style="background-color: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); color: var(--color-error)">
+              {{ error() }}
+            </div>
+          }
+
+          <div class="flex gap-3">
+            <app-button variant="secondary" (click)="step.set('sources')"
+              class="border" style="border-color: var(--color-border-strong); color: var(--color-text-secondary)">
+              ← Back
+            </app-button>
+            <app-button [fullWidth]="true" [loading]="loading()" (click)="submitSources()">
+              Build Persona 🪞
+            </app-button>
+          </div>
+        </div>
+      }
+
+    </div>
+  </main>
+</div>

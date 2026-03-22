@@ -43,9 +43,7 @@ export class PersonaService {
 
   loadAll() {
     this.loading.set(true);
-    return this.http
-      .get<{ data: Persona[] }>(`${environment.apiUrl}/personas`)
-      .pipe();
+    return this.http.get<{ data: Persona[] }>(`${environment.apiUrl}/personas`);
   }
 
   create(dto: CreatePersonaDto) {

@@ -1,16 +1,44 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, OnInit, signal } from '@angular/core';
+import { RouterLink, Router } from '@angular/router';
+import { DatePipe } from '@angular/common';
+import { AuthService } from '../../core/services/auth.service';
+import { PersonaService, Persona } from '../../core/services/persona.service';
+import { ButtonComponent } from '../../shared/components/button/button.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink],
-  template: `<div class="min-h-screen p-8" style="background-color: var(--color-bg-base)">
-    <h1 class="text-2xl font-bold" style="color: var(--color-text-primary)">Dashboard</h1>
-    <p style="color: var(--color-text-muted)" class="mt-2">Your personas will appear here.</p>
-    <a routerLink="/persona/new" class="inline-block mt-6 px-6 py-3 rounded-xl font-semibold text-white gradient-accent">
-      + New Persona
-    </a>
-  </div>`,
+  imports: [RouterLink, ButtonComponent, DatePipe],
+  templateUrl: './dashboard.component.html',
 })
-export class DashboardComponent {}
+export class DashboardComponent implements OnInit {
+  personas = signal<Persona[]>([]);
+  loading = signal(true);
+
+  constructor(
+    private auth: AuthService,
+    private personaService: PersonaService,
+  ) {}
+
+  ngOnInit() {
+    this.personaService.loadAll().subscribe({
+      next: (res) => {
+        this.personas.set(res.data ?? []);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
+
+  logout() {
+    this.auth.logout();
+  }
+
+  statusColor(status: string): string {
+    return { draft: '#71717A', processing: '#F59E0B', ready: '#22C55E' }[status] ?? '#71717A';
+  }
+
+  statusLabel(status: string): string {
+    return { draft: 'Draft', processing: 'Processing...', ready: 'Ready' }[status] ?? status;
+  }
+}

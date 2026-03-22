@@ -14,17 +14,18 @@ import { InputComponent } from '../../../shared/components/input/input.component
 export class LoginComponent {
   loading = signal(false);
   error = signal('');
-
-  form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
-  });
+  form;
 
   constructor(
-    private fb: FormBuilder,
+    fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-  ) {}
+  ) {
+    this.form = fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
+    });
+  }
 
   submit() {
     if (this.form.invalid || this.loading()) return;

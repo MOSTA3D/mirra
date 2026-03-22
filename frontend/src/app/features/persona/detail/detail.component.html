@@ -1,0 +1,123 @@
+<div class="min-h-screen" style="background-color: var(--color-bg-base)">
+
+  <!-- Nav -->
+  <nav class="border-b px-8 py-4 flex items-center gap-4" style="border-color: var(--color-border); background-color: var(--color-bg-surface)">
+    <a routerLink="/dashboard" class="text-sm transition-colors" style="color: var(--color-text-muted)">← Dashboard</a>
+    <span class="text-sm" style="color: var(--color-border-strong)">/</span>
+    <span class="text-sm font-medium" style="color: var(--color-text-secondary)">{{ persona()?.name ?? '...' }}</span>
+  </nav>
+
+  <main class="max-w-4xl mx-auto px-6 py-12">
+
+    @if (loading()) {
+      <div class="flex items-center justify-center py-24">
+        <div class="w-8 h-8 border-2 rounded-full animate-spin"
+             style="border-color: var(--color-border-strong); border-top-color: var(--color-accent-solid)"></div>
+      </div>
+    }
+
+    @else if (!persona()) {
+      <div class="text-center py-24">
+        <p style="color: var(--color-text-muted)">Persona not found.</p>
+        <a routerLink="/dashboard" class="mt-4 inline-block text-sm" style="color: var(--color-accent-solid)">Back to dashboard</a>
+      </div>
+    }
+
+    @else {
+      <!-- Header -->
+      <div class="flex items-start justify-between mb-10">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <h1 class="text-2xl font-bold" style="color: var(--color-text-primary)">{{ persona()!.name }}</h1>
+            <span class="text-xs px-2 py-0.5 rounded-full border"
+                  style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+              {{ persona()!.visibility }}
+            </span>
+          </div>
+          <p class="text-sm" style="color: var(--color-text-muted)">
+            {{ persona()!.slug }} · Created {{ persona()!.createdAt | date:'MMM d, y' }}
+          </p>
+        </div>
+        <app-button [loading]="exporting()" (click)="exportPersona()">
+          Export MD
+        </app-button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Persona info -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+
+          <!-- Status card -->
+          <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+            <h2 class="text-sm font-semibold mb-4" style="color: var(--color-text-secondary)">STATUS</h2>
+            <div class="flex items-center gap-3">
+              @if (persona()!.status === 'draft') {
+                <span class="w-2.5 h-2.5 rounded-full" style="background-color: var(--color-text-muted)"></span>
+                <span style="color: var(--color-text-muted)">Draft — add sources and submit to build</span>
+              } @else if (persona()!.status === 'processing') {
+                <span class="w-2.5 h-2.5 rounded-full animate-pulse" style="background-color: var(--color-warning)"></span>
+                <span style="color: var(--color-warning)">Processing...</span>
+              } @else {
+                <span class="w-2.5 h-2.5 rounded-full" style="background-color: var(--color-success)"></span>
+                <span style="color: var(--color-success)">Ready</span>
+              }
+            </div>
+          </div>
+
+          <!-- Disclaimer -->
+          <div class="px-5 py-4 rounded-2xl border text-sm leading-relaxed"
+               style="background-color: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.15); color: var(--color-text-muted)">
+            ⚠️ {{ persona()!.disclaimer }}
+          </div>
+
+          <!-- Export output -->
+          @if (exportContent()) {
+            <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-semibold" style="color: var(--color-text-secondary)">EXPORTED PERSONA</h2>
+                <button (click)="copyToClipboard()" class="text-xs px-3 py-1.5 rounded-lg border transition-all"
+                        style="border-color: var(--color-border-strong); color: var(--color-text-muted)">
+                  {{ copied() ? '✓ Copied!' : 'Copy' }}
+                </button>
+              </div>
+              <pre class="text-xs leading-relaxed whitespace-pre-wrap overflow-auto max-h-80"
+                   style="color: var(--color-text-secondary); font-family: 'JetBrains Mono', monospace">{{ exportContent() }}</pre>
+            </div>
+          }
+        </div>
+
+        <!-- Right: Confidence scores -->
+        <div class="flex flex-col gap-4">
+          <div class="p-6 rounded-2xl border" style="background-color: var(--color-bg-surface); border-color: var(--color-border)">
+            <h2 class="text-sm font-semibold mb-5" style="color: var(--color-text-secondary)">CONFIDENCE</h2>
+
+            @if (confidenceDimensions(persona()!.confidence).length === 0) {
+              <p class="text-sm" style="color: var(--color-text-muted)">
+                Not yet processed. Submit sources to generate confidence scores.
+              </p>
+            } @else {
+              <div class="flex flex-col gap-4">
+                @for (dim of confidenceDimensions(persona()!.confidence); track dim.key) {
+                  <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs font-medium capitalize" style="color: var(--color-text-secondary)">{{ dim.key }}</span>
+                      <span class="text-xs font-bold" [style.color]="confidenceColor(dim.val)">
+                        {{ (dim.val * 100).toFixed(0) }}%
+                      </span>
+                    </div>
+                    <div class="w-full h-1.5 rounded-full" style="background-color: var(--color-border-strong)">
+                      <div class="h-1.5 rounded-full transition-all"
+                           [style.width.%]="dim.val * 100"
+                           [style.background-color]="confidenceColor(dim.val)"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </main>
+</div>
