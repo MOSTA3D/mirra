@@ -30,12 +30,13 @@ type Persona struct {
 
 // Source represents a data source attached to a persona.
 type Source struct {
-	ID        string    `json:"id"`
-	PersonaID string    `json:"personaId"`
-	Type      string    `json:"type"`
-	Content   string    `json:"content"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          string    `json:"id"`
+	PersonaID   string    `json:"personaId"`
+	Type        string    `json:"type"`
+	Content     string    `json:"content"`
+	SpeakerName string    `json:"speakerName,omitempty"` // for chat formats: target person's name
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // Job represents an async processing job.

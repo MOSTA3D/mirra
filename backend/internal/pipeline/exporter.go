@@ -70,6 +70,20 @@ func (e *Exporter) ToMarkdown(profile *PersonaProfile) string {
 		b.WriteString("\n")
 	}
 
+	// Lifestyle section (behavioral signals — silently inform persona)
+	hasLifestyle := len(profile.Locations) > 0 || len(profile.Foods) > 0
+	if hasLifestyle {
+		b.WriteString("## Lifestyle & Habits\n\n")
+		b.WriteString("_Inferred from behavioral signals — not direct statements._\n\n")
+		if len(profile.Locations) > 0 {
+			b.WriteString(fmt.Sprintf("- **Places:** %s\n", strings.Join(profile.Locations, ", ")))
+		}
+		if len(profile.Foods) > 0 {
+			b.WriteString(fmt.Sprintf("- **Food/Dining:** %s\n", strings.Join(profile.Foods, ", ")))
+		}
+		b.WriteString("\n")
+	}
+
 	// Core beliefs
 	if len(profile.CoreBeliefs) > 0 {
 		b.WriteString("## Core Beliefs & Opinions\n\n")

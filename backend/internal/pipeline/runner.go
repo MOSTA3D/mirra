@@ -104,9 +104,8 @@ func (r *Runner) runPipeline(ctx context.Context, job *store.Job, personaName st
 	r.updateStep(ctx, job, "ingest")
 	var chunks []*Chunk
 	for _, src := range sources {
-		chunk := r.ingestor.Ingest(src.Type, src.Content)
+		chunk := r.ingestor.Ingest(src.Type, src.Content, src.SpeakerName)
 		chunks = append(chunks, chunk)
-		// Mark source as processed
 		src.Status = "processed"
 	}
 

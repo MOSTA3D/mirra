@@ -3,14 +3,17 @@ package pipeline
 // PersonaProfile is the structured output of the distillation pipeline.
 // It captures the key dimensions that define a person's personality and communication style.
 type PersonaProfile struct {
-	Name        string             `json:"name"`
-	Summary     string             `json:"summary"`
-	Dimensions  map[string]Dimension `json:"dimensions"`
-	VocabStyle  VocabStyle         `json:"vocabStyle"`
-	CoreBeliefs []string           `json:"coreBeliefs"`
-	Interests   []string           `json:"interests"`
-	Quirks      []string           `json:"quirks"`
-	SamplePhrases []string         `json:"samplePhrases"`
+	Name          string               `json:"name"`
+	Summary       string               `json:"summary"`
+	Dimensions    map[string]Dimension `json:"dimensions"`
+	VocabStyle    VocabStyle           `json:"vocabStyle"`
+	CoreBeliefs   []string             `json:"coreBeliefs"`
+	Interests     []string             `json:"interests"`
+	Quirks        []string             `json:"quirks"`
+	SamplePhrases []string             `json:"samplePhrases"`
+	// Behavioral data — shown in lifestyle section of the export
+	Locations     []string             `json:"locations"`
+	Foods         []string             `json:"foods"`
 }
 
 // Dimension represents a single personality/communication dimension with a score and evidence.

@@ -84,12 +84,12 @@
             The more you add, the richer the persona.
           </p>
 
-          <!-- Source type tabs -->
-          <div class="flex gap-2 mb-4">
+          <!-- Source type tabs — scrollable row -->
+          <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
             @for (t of sourceTypes; track t) {
               <button
                 (click)="activeSourceType.set(t)"
-                class="px-4 py-2 rounded-xl text-sm font-medium transition-all border"
+                class="px-3 py-2 rounded-xl text-xs font-medium transition-all border whitespace-nowrap shrink-0"
                 [style.border-color]="activeSourceType() === t ? 'var(--color-accent-solid)' : 'var(--color-border-strong)'"
                 [style.color]="activeSourceType() === t ? 'var(--color-accent-solid)' : 'var(--color-text-muted)'"
                 [style.background-color]="activeSourceType() === t ? 'rgba(139,92,246,0.08)' : 'transparent'">
@@ -98,31 +98,49 @@
             }
           </div>
 
+          <!-- Guidance tip -->
+          <div class="mb-3 px-4 py-3 rounded-xl text-xs leading-relaxed border"
+               style="background-color: var(--color-bg-elevated); border-color: var(--color-border); color: var(--color-text-muted)">
+            💡 {{ guidance(activeSourceType()) }}
+          </div>
+
+          <!-- Speaker name (for chat formats) -->
+          @if (isChatFormat(activeSourceType())) {
+            <div class="mb-3">
+              <input
+                type="text"
+                [value]="speakerName()"
+                (input)="speakerName.set($any($event.target).value)"
+                [placeholder]="'Target person\'s name in this chat (e.g. Nicolas)'"
+                class="w-full px-4 py-3 rounded-xl text-sm outline-none border"
+                style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+              />
+              <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
+                Required — used to isolate their messages from others in the chat.
+              </p>
+            </div>
+          }
+
           <!-- Source input -->
           <div class="mb-3">
-            @if (activeSourceType() === 'text') {
-              <textarea
-                [value]="sourceContent()"
-                (input)="sourceContent.set($any($event.target).value)"
-                placeholder="Paste quotes, bios, interview transcripts, chat exports..."
-                rows="5"
-                class="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none border"
-                style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
-              ></textarea>
-            } @else if (activeSourceType() === 'url') {
+            @if (activeSourceType() === 'url') {
               <input
                 type="url"
                 [value]="sourceContent()"
                 (input)="sourceContent.set($any($event.target).value)"
-                placeholder="https://twitter.com/username"
+                placeholder="https://..."
                 class="w-full px-4 py-3 rounded-xl text-sm outline-none border"
                 style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
               />
             } @else {
-              <div class="w-full px-4 py-8 rounded-xl border text-center text-sm"
-                   style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-muted);">
-                📄 PDF upload coming soon — paste the text content for now
-              </div>
+              <textarea
+                [value]="sourceContent()"
+                (input)="sourceContent.set($any($event.target).value)"
+                [placeholder]="activeSourceType() === 'text' ? 'Paste quotes, bios, interview transcripts...' : 'Paste the exported content here...'"
+                rows="6"
+                class="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none border"
+                style="background-color: var(--color-bg-elevated); border-color: var(--color-border-strong); color: var(--color-text-primary);"
+              ></textarea>
             }
           </div>
 

@@ -18,6 +18,12 @@ type Signals struct {
 	TotalWords      int
 	TotalSentences  int
 	AllSentences    []string
+	// Behavioral signals collected from all sources (silently inform persona)
+	Locations  []string
+	Foods      []string
+	Interests  []string
+	SocialPatterns []string
+	Activities []string
 }
 
 // Extractor pulls personality signals from ingested chunks.
@@ -38,6 +44,22 @@ func (e *Extractor) Extract(chunks []*Chunk) *Signals {
 		sigs.AllSentences = append(sigs.AllSentences, chunk.Sentences...)
 		sigs.TotalWords += chunk.WordCount
 		sigs.TotalSentences += len(chunk.Sentences)
+
+		// Collect behavioral signals
+		for _, sig := range chunk.BehavioralSignals {
+			switch sig.Category {
+			case "location":
+				sigs.Locations = append(sigs.Locations, sig.Value)
+			case "food":
+				sigs.Foods = append(sigs.Foods, sig.Value)
+			case "interest":
+				sigs.Interests = append(sigs.Interests, sig.Value)
+			case "social":
+				sigs.SocialPatterns = append(sigs.SocialPatterns, sig.Value)
+			case "activity":
+				sigs.Activities = append(sigs.Activities, sig.Value)
+			}
+		}
 
 		for _, sentence := range chunk.Sentences {
 			totalSentenceLen += len(strings.Fields(sentence))

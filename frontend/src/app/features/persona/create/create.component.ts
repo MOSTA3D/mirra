@@ -6,12 +6,26 @@ import { ButtonComponent } from '../../../shared/components/button/button.compon
 import { InputComponent } from '../../../shared/components/input/input.component';
 
 type Step = 'name' | 'sources' | 'review';
-type SourceType = 'url' | 'text' | 'pdf';
+type SourceType = 'url' | 'text' | 'pdf' | 'whatsapp' | 'telegram' | 'twitter' | 'instagram';
 
 interface DraftSource {
   type: SourceType;
   content: string;
+  speakerName?: string;
 }
+
+const CHAT_FORMATS: SourceType[] = ['whatsapp', 'telegram'];
+const EXPORT_FORMATS: SourceType[] = ['whatsapp', 'telegram', 'twitter', 'instagram'];
+
+const GUIDANCE: Record<string, string> = {
+  whatsapp: 'Open the chat → ⋮ → More → Export Chat → Without Media. Paste the .txt content below.',
+  telegram: 'Desktop app → Chat → ⋮ → Export Chat History → JSON format. Paste the JSON content below.',
+  twitter: 'Settings → Your Account → Download Archive → open tweets.js. Paste the file content below.',
+  instagram: 'Settings → Your Activity → Download Your Information → JSON → Posts. Paste the JSON below.',
+  url: 'Paste a URL to a social media profile, article, or any relevant page.',
+  text: 'Paste any text — quotes, bios, interview transcripts, descriptions, anything.',
+  pdf: 'Paste the text content from a PDF (chat export, article, biography, etc.).',
+};
 
 @Component({
   selector: 'app-create-persona',
@@ -30,7 +44,11 @@ export class CreatePersonaComponent {
 
   activeSourceType = signal<SourceType>('text');
   sourceContent = signal('');
-  sourceTypes: SourceType[] = ['text', 'url', 'pdf'];
+  speakerName = signal('');
+  sourceTypes: SourceType[] = ['text', 'url', 'whatsapp', 'telegram', 'twitter', 'instagram', 'pdf'];
+
+  isChatFormat = (t: SourceType) => CHAT_FORMATS.includes(t);
+  guidance = (t: SourceType) => GUIDANCE[t] ?? '';
 
   nameForm!: ReturnType<FormBuilder['group']>;
 
@@ -73,8 +91,13 @@ export class CreatePersonaComponent {
     const content = this.sourceContent().trim();
     if (!content) return;
 
-    this.sources.update(s => [...s, { type: this.activeSourceType(), content }]);
+    this.sources.update(s => [...s, {
+      type: this.activeSourceType(),
+      content,
+      speakerName: this.speakerName().trim() || undefined,
+    }]);
     this.sourceContent.set('');
+    this.speakerName.set('');
   }
 
   removeSource(index: number) {
@@ -97,7 +120,7 @@ export class CreatePersonaComponent {
       // Submit all sources sequentially
       for (const src of srcs) {
         await new Promise<void>((resolve, reject) => {
-          this.personaService.addSource(id, { type: src.type, content: src.content }).subscribe({
+          this.personaService.addSource(id, { type: src.type as any, content: src.content, speakerName: src.speakerName }).subscribe({
             next: () => resolve(),
             error: (e) => reject(e),
           });
@@ -120,6 +143,11 @@ export class CreatePersonaComponent {
   }
 
   sourceTypeLabel(type: SourceType): string {
-    return { url: '🔗 URL', text: '📝 Text', pdf: '📄 PDF' }[type];
+    const labels: Record<string, string> = {
+      text: '📝 Text', url: '🔗 URL', pdf: '📄 PDF',
+      whatsapp: '💬 WhatsApp', telegram: '✈️ Telegram',
+      twitter: '🐦 Twitter/X', instagram: '📸 Instagram',
+    };
+    return labels[type] ?? type;
   }
 }

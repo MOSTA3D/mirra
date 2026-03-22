@@ -76,6 +76,21 @@ func (d *Distiller) Distill(name string, sigs *Signals) *PersonaProfile {
 	// --- Quirks ---
 	profile.Quirks = detectQuirks(sigs)
 
+	// --- Behavioral data (silent signals → enrich interests + quirks) ---
+	// Deduplicate and merge locations/foods into profile
+	if len(sigs.Locations) > 0 {
+		profile.Locations = dedup(sigs.Locations, 5)
+	}
+	if len(sigs.Foods) > 0 {
+		profile.Foods = dedup(sigs.Foods, 5)
+	}
+	// Merge behavioral interests into topic-based interests
+	for _, interest := range dedup(sigs.Interests, 10) {
+		if !contains(profile.Interests, interest) {
+			profile.Interests = append(profile.Interests, interest)
+		}
+	}
+
 	// --- Summary ---
 	profile.Summary = buildSummary(name, profile)
 
@@ -256,6 +271,30 @@ func buildSummary(name string, p *PersonaProfile) string {
 	}
 
 	return strings.Join(parts, " ")
+}
+
+func dedup(s []string, max int) []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, v := range s {
+		if v != "" && !seen[v] {
+			seen[v] = true
+			result = append(result, v)
+			if len(result) >= max {
+				break
+			}
+		}
+	}
+	return result
+}
+
+func contains(s []string, v string) bool {
+	for _, item := range s {
+		if item == v {
+			return true
+		}
+	}
+	return false
 }
 
 func take(s []string, n int) []string {

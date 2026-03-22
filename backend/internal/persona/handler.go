@@ -34,8 +34,9 @@ type createPersonaRequest struct {
 }
 
 type addSourceRequest struct {
-	Type    string `json:"type"`
-	Content string `json:"content"`
+	Type        string `json:"type"`
+	Content     string `json:"content"`
+	SpeakerName string `json:"speakerName"` // for chat formats
 }
 
 type updatePersonaRequest struct {
@@ -231,12 +232,13 @@ func (h *Handler) AddSource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	src := &store.Source{
-		ID:        uuid.NewString(),
-		PersonaID: personaID,
-		Type:      req.Type,
-		Content:   strings.TrimSpace(req.Content),
-		Status:    "pending",
-		CreatedAt: time.Now().UTC(),
+		ID:          uuid.NewString(),
+		PersonaID:   personaID,
+		Type:        req.Type,
+		Content:     strings.TrimSpace(req.Content),
+		SpeakerName: strings.TrimSpace(req.SpeakerName),
+		Status:      "pending",
+		CreatedAt:   time.Now().UTC(),
 	}
 
 	if err := h.personas.AddSource(r.Context(), src); err != nil {
@@ -320,7 +322,7 @@ func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 
 		var chunks []*pipeline.Chunk
 		for _, src := range sources {
-			chunks = append(chunks, ingestor.Ingest(src.Type, src.Content))
+			chunks = append(chunks, ingestor.Ingest(src.Type, src.Content, src.SpeakerName))
 		}
 		signals := extractor.Extract(chunks)
 		profile := distiller.Distill(p.Name, signals)

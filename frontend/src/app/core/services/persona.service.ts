@@ -32,6 +32,7 @@ export interface CreatePersonaDto {
 export interface AddSourceDto {
   type: 'url' | 'pdf' | 'text';
   content: string;
+  speakerName?: string;
 }
 
 @Injectable({ providedIn: 'root' })
