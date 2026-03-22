@@ -22,6 +22,7 @@
           label="Email"
           type="email"
           placeholder="you@example.com"
+          [control]="form.get('email')"
         />
 
         <app-input
@@ -29,6 +30,7 @@
           label="Password"
           type="password"
           placeholder="Min. 8 characters"
+          [control]="form.get('password')"
         />
 
         <app-button type="submit" [loading]="loading()" [fullWidth]="true" class="mt-1">
