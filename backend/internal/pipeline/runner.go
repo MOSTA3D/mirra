@@ -129,9 +129,12 @@ func (r *Runner) runPipeline(ctx context.Context, job *store.Job, personaName st
 		llmInput := llm.SynthesisInput{
 			Name:           personaName,
 			HumorScore:     profile.Dimensions["humor"].Score,
-			ToneScore:      1 - profile.Dimensions["tone"].Score, // convert back to formality
+			ToneScore:      profile.Dimensions["tone"].Score,
 			OpinionScore:   profile.Dimensions["opinions"].Score,
 			EmotionScore:   profile.Dimensions["emotion"].Score,
+			DirectScore:    profile.Dimensions["directness"].Score,
+			VocabScore:     profile.Dimensions["vocabulary"].Score,
+			EngageScore:    profile.Dimensions["engagement"].Score,
 			AvgSentenceLen: signals.AvgSentenceLen,
 			TopInterests:   profile.Interests,
 			SampleQuotes:   profile.SamplePhrases,
@@ -143,10 +146,9 @@ func (r *Runner) runPipeline(ctx context.Context, job *store.Job, personaName st
 
 		llmOutput, err := r.llm.Synthesize(ctx, llmInput)
 		if err != nil {
-			// LLM failure is non-fatal — log and continue with rule-based
-			log.Printf("pipeline: LLM enrichment failed (using rule-based fallback): %v", err)
+			log.Printf("pipeline: LLM enrichment failed (using stat fallback): %v", err)
 		} else {
-			// Enrich profile with LLM output
+			// Enrich text fields
 			profile.Summary = llmOutput.Summary
 			profile.VoiceGuide = llmOutput.VoiceGuide
 			profile.LLMSystemPrompt = llmOutput.SystemPrompt
@@ -154,7 +156,18 @@ func (r *Runner) runPipeline(ctx context.Context, job *store.Job, personaName st
 				profile.CoreBeliefs = llmOutput.CoreTraits
 			}
 			profile.LLMEnriched = true
-			log.Printf("pipeline: LLM enrichment successful")
+
+			// Override dimension scores with LLM-calibrated ones
+			if len(llmOutput.Scores) > 0 {
+				for key, score := range llmOutput.Scores {
+					if dim, ok := profile.Dimensions[key]; ok {
+						dim.Score = score
+						dim.Description = updateDescription(key, score)
+						profile.Dimensions[key] = dim
+					}
+				}
+			}
+			log.Printf("pipeline: LLM enrichment successful (scores overridden: %v)", len(llmOutput.Scores) > 0)
 		}
 	}
 

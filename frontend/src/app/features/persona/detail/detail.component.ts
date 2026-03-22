@@ -166,12 +166,28 @@ export class PersonaDetailComponent implements OnInit, OnDestroy {
     return 'var(--color-error)';
   }
 
+  dimensionLabel(key: string): string {
+    const labels: Record<string, string> = {
+      humor: 'Humor',
+      tone: 'Casual tone',
+      opinions: 'Opinionated',
+      emotion: 'Emotional',
+      directness: 'Directness',
+      vocabulary: 'Vocabulary richness',
+      engagement: 'Engagement',
+    };
+    return labels[key] ?? key;
+  }
+
   confidenceZeroReason(dimension: string): string {
     const reasons: Record<string, string> = {
-      humor: 'No humor signals found — the source text may not contain jokes, emoji, or lighthearted language.',
-      opinions: 'No opinion signals found — the text may be descriptive rather than expressing personal views.',
-      emotion: 'No emotion signals found — add personal messages or posts where feelings are expressed.',
-      tone: 'Tone detection found no strong formal/casual markers.',
+      humor: 'No humor signals — add casual chats, tweets, or playful messages.',
+      opinions: 'No opinion signals — add interviews, posts, or messages where they share views.',
+      emotion: 'No emotion signals — add personal messages or expressive posts.',
+      tone: 'Tone is ambiguous — add more natural conversation samples.',
+      directness: 'No directness signals detected in available sources.',
+      vocabulary: 'Vocabulary analysis needs more content.',
+      engagement: 'No questions or interactive language detected.',
     };
     return reasons[dimension] ?? 'No signal detected in the provided sources.';
   }

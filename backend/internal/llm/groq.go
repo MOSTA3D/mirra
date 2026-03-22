@@ -99,10 +99,13 @@ func buildPrompt(in SynthesisInput) string {
 	b.WriteString(fmt.Sprintf("Build a persona profile for: %s\n\n", in.Name))
 
 	b.WriteString("## Extracted signals (from their actual content):\n")
-	b.WriteString(fmt.Sprintf("- Humor level: %.0f%%\n", in.HumorScore*100))
-	b.WriteString(fmt.Sprintf("- Tone: %.0f%% formal (0=very casual, 100=very formal)\n", in.ToneScore*100))
+	b.WriteString(fmt.Sprintf("- Humor: %.0f%% (statistical estimate)\n", in.HumorScore*100))
+	b.WriteString(fmt.Sprintf("- Tone: %.0f%% casual (100=very casual, 0=very formal)\n", in.ToneScore*100))
 	b.WriteString(fmt.Sprintf("- Opinionated: %.0f%%\n", in.OpinionScore*100))
 	b.WriteString(fmt.Sprintf("- Emotional expression: %.0f%%\n", in.EmotionScore*100))
+	b.WriteString(fmt.Sprintf("- Directness: %.0f%%\n", in.DirectScore*100))
+	b.WriteString(fmt.Sprintf("- Vocabulary richness: %.0f%%\n", in.VocabScore*100))
+	b.WriteString(fmt.Sprintf("- Engagement: %.0f%%\n", in.EngageScore*100))
 	b.WriteString(fmt.Sprintf("- Avg sentence length: %.0f words (%s)\n", in.AvgSentenceLen, sentenceStyleLabel(in.AvgSentenceLen)))
 
 	if len(in.TopInterests) > 0 {
@@ -134,28 +137,48 @@ Respond with a JSON object with these exact keys:
   "summary": "2-3 sentences describing who this person is and how they communicate",
   "voice_guide": "3-5 sentences describing HOW they talk — their rhythm, phrasing, mannerisms. Be specific and vivid, not generic.",
   "core_traits": ["trait1", "trait2", "trait3", "trait4"],
-  "system_prompt": "Complete system prompt (300-400 words) for an AI to roleplay as this person. Include personality, communication style, what to avoid, and example phrases."
-}`)
+  "system_prompt": "Complete system prompt (300-400 words) for an AI to roleplay as this person. Include personality, communication style, what to avoid, and example phrases.",
+  "scores": {
+    "humor": 0.0,
+    "tone": 0.0,
+    "opinions": 0.0,
+    "emotion": 0.0,
+    "directness": 0.0,
+    "vocabulary": 0.0,
+    "engagement": 0.0
+  }
+}
+
+For scores: each value is 0.0-1.0. tone = 1.0 means very casual, 0.0 means very formal. Base scores on the actual content and quotes provided, not assumptions. If there is insufficient evidence for a dimension, score it 0.1-0.3 rather than 0.`)
 
 	return b.String()
 }
 
 func parseOutput(content, name string) (*SynthesisOutput, error) {
 	var parsed struct {
-		Summary      string   `json:"summary"`
-		VoiceGuide   string   `json:"voice_guide"`
-		CoreTraits   []string `json:"core_traits"`
-		SystemPrompt string   `json:"system_prompt"`
+		Summary      string             `json:"summary"`
+		VoiceGuide   string             `json:"voice_guide"`
+		CoreTraits   []string           `json:"core_traits"`
+		SystemPrompt string             `json:"system_prompt"`
+		Scores       map[string]float64 `json:"scores"`
 	}
 
 	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
-		// If JSON parse fails, use content as summary fallback
 		return &SynthesisOutput{
 			Summary:      content,
 			VoiceGuide:   "",
 			CoreTraits:   []string{},
 			SystemPrompt: fmt.Sprintf("You are roleplaying as %s. %s", name, content),
+			Scores:       map[string]float64{},
 		}, nil
+	}
+
+	// Clamp all scores to [0,1]
+	scores := make(map[string]float64)
+	for k, v := range parsed.Scores {
+		if v < 0 { v = 0 }
+		if v > 1 { v = 1 }
+		scores[k] = v
 	}
 
 	return &SynthesisOutput{
@@ -163,6 +186,7 @@ func parseOutput(content, name string) (*SynthesisOutput, error) {
 		VoiceGuide:   parsed.VoiceGuide,
 		CoreTraits:   parsed.CoreTraits,
 		SystemPrompt: parsed.SystemPrompt,
+		Scores:       scores,
 	}, nil
 }
 
