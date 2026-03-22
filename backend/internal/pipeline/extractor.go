@@ -19,11 +19,21 @@ type Signals struct {
 	TotalSentences  int
 	AllSentences    []string
 	// Behavioral signals collected from all sources (silently inform persona)
-	Locations  []string
-	Foods      []string
-	Interests  []string
+	Locations      []string
+	Foods          []string
+	Interests      []string
 	SocialPatterns []string
-	Activities []string
+	Activities     []string
+	// Diagnostic — explains low scores to users
+	Diagnostics SignalDiagnostics
+}
+
+// SignalDiagnostics explains why dimensions scored low.
+type SignalDiagnostics struct {
+	InsufficientContent bool   // fewer than 50 words
+	NoFirstPerson       bool   // no "I" statements found — probably third-party content
+	LikelyThirdPerson   bool   // text talks about the person, not from them
+	SuggestedActions    []string
 }
 
 // Extractor pulls personality signals from ingested chunks.
@@ -106,7 +116,46 @@ func (e *Extractor) Extract(chunks []*Chunk) *Signals {
 		sigs.AvgSentenceLen = float64(totalSentenceLen) / float64(sigs.TotalSentences)
 	}
 
+	// Build diagnostics
+	sigs.Diagnostics = buildDiagnostics(sigs)
+
 	return sigs
+}
+
+func buildDiagnostics(sigs *Signals) SignalDiagnostics {
+	d := SignalDiagnostics{}
+
+	if sigs.TotalWords < 50 {
+		d.InsufficientContent = true
+		d.SuggestedActions = append(d.SuggestedActions,
+			"Add more content — at least a few paragraphs work best")
+	}
+
+	// Check for first-person signals
+	firstPersonCount := len(sigs.OpinionMarkers) + len(sigs.EmotionMarkers)
+	if firstPersonCount == 0 && sigs.TotalSentences > 5 {
+		// Check if content is third-person
+		d.NoFirstPerson = true
+		d.SuggestedActions = append(d.SuggestedActions,
+			"Add content written by the person directly (their posts, messages, or quotes)")
+	}
+
+	if len(sigs.HumorMarkers) == 0 && sigs.TotalSentences > 10 {
+		d.SuggestedActions = append(d.SuggestedActions,
+			"Humor score is 0 — add casual conversations or posts where they're being funny")
+	}
+
+	if len(sigs.OpinionMarkers) == 0 && sigs.TotalSentences > 10 {
+		d.SuggestedActions = append(d.SuggestedActions,
+			"Opinion score is 0 — add interviews, tweets, or texts where they share their views")
+	}
+
+	if len(sigs.EmotionMarkers) == 0 && sigs.TotalSentences > 10 {
+		d.SuggestedActions = append(d.SuggestedActions,
+			"Emotion score is 0 — add personal messages or posts where they express feelings")
+	}
+
+	return d
 }
 
 func cleanWord(w string) string {
@@ -135,26 +184,49 @@ func clamp(v float64) float64 {
 // --- Signal dictionaries ---
 
 var humorWords = []string{
-	"haha", "lol", "funny", "joke", "laugh", "hilarious", "humor", "sarcas",
-	"ironic", "irony", "wit", "witty", "pun", "absurd", "ridiculous", "comedy",
+	// English
+	"haha", "lol", "lmao", "rofl", "funny", "joke", "jokes", "laugh", "laughing",
+	"hilarious", "humor", "humour", "sarcas", "ironic", "irony", "wit", "witty",
+	"pun", "absurd", "ridiculous", "comedy", "😂", "🤣", "😄", "😆", "😅",
+	"kidding", "just kidding", "jk", "playful", "teasing", "banter",
+	// Arabic
+	"هههه", "ههه", "هه", "طريف", "مضحك", "نكتة", "ضحك",
 }
 
 var opinionWords = []string{
-	"i think", "i believe", "in my opinion", "i feel", "i know", "i'm sure",
+	// English first-person
+	"i think", "i believe", "i feel", "i know", "i'm sure", "i am sure",
+	"in my opinion", "in my view", "from my perspective", "personally",
 	"honestly", "frankly", "clearly", "obviously", "i agree", "i disagree",
-	"you should", "we must", "i strongly", "i always", "i never", "i love", "i hate",
+	"you should", "we must", "i strongly", "i always", "i never",
+	"i love", "i hate", "i prefer", "i find", "i consider", "i say",
+	"my view", "my opinion", "my take", "my belief",
+	// Third-person opinion markers (for articles/bios)
+	"he believes", "she believes", "they believe",
+	"he thinks", "she thinks", "he says", "she says",
+	"according to", "stated that", "argued that", "claimed that",
+	// Arabic
+	"أعتقد", "أظن", "رأيي", "في رأيي", "أنا أفضل", "برأيي", "أرى",
 }
 
 var emotionWords = []string{
-	"love", "hate", "fear", "angry", "happy", "sad", "excited", "frustrated",
-	"passionate", "care", "miss", "proud", "anxious", "nervous", "joy", "pain",
-	"suffer", "enjoy", "inspire", "hope", "dream", "believe", "amazing", "beautiful",
+	// English
+	"love", "hate", "fear", "angry", "anger", "happy", "happiness", "sad", "sadness",
+	"excited", "excitement", "frustrated", "frustration", "passionate", "passion",
+	"care", "caring", "miss", "proud", "pride", "anxious", "anxiety", "nervous",
+	"joy", "pain", "suffer", "enjoy", "inspire", "hope", "dream", "believe",
+	"amazing", "beautiful", "wonderful", "terrible", "awful", "incredible",
+	"heartbroken", "thrilled", "devastated", "grateful", "thankful",
+	"❤️", "💔", "😍", "😢", "😭", "🥹", "😤", "😡",
+	// Arabic
+	"أحب", "أكره", "سعيد", "حزين", "خائف", "متحمس", "ممتن", "أتمنى",
 }
 
 var formalWords = []string{
 	"therefore", "furthermore", "consequently", "moreover", "nevertheless",
 	"accordingly", "subsequently", "in conclusion", "regarding", "pertaining",
 	"hereby", "pursuant", "notwithstanding", "aforementioned",
+	"with respect to", "in accordance", "it should be noted",
 }
 
 var topicKeywords = map[string][]string{

@@ -11,6 +11,7 @@ export interface Persona {
   status: 'draft' | 'processing' | 'ready';
   disclaimer: string;
   confidence: Record<string, number>;
+  suggestions?: string[];
   createdAt: string;
   updatedAt: string;
 }

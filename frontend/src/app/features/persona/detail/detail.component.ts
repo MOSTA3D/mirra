@@ -160,8 +160,47 @@ export class PersonaDetailComponent implements OnInit, OnDestroy {
   }
 
   confidenceColor(val: number): string {
+    if (val === 0) return 'var(--color-text-muted)';
     if (val >= 0.7) return 'var(--color-success)';
     if (val >= 0.4) return 'var(--color-warning)';
     return 'var(--color-error)';
+  }
+
+  confidenceZeroReason(dimension: string): string {
+    const reasons: Record<string, string> = {
+      humor: 'No humor signals found — the source text may not contain jokes, emoji, or lighthearted language.',
+      opinions: 'No opinion signals found — the text may be descriptive rather than expressing personal views.',
+      emotion: 'No emotion signals found — add personal messages or posts where feelings are expressed.',
+      tone: 'Tone detection found no strong formal/casual markers.',
+    };
+    return reasons[dimension] ?? 'No signal detected in the provided sources.';
+  }
+
+  overallQuality(): number {
+    const dims = this.confidenceDimensions(this.persona()?.confidence ?? {});
+    if (dims.length === 0) return 0;
+    return dims.reduce((sum, d) => sum + d.val, 0) / dims.length;
+  }
+
+  overallQualityLabel(): string {
+    const q = this.overallQuality();
+    if (q >= 0.7) return 'Strong';
+    if (q >= 0.4) return 'Moderate';
+    if (q > 0) return 'Weak';
+    return 'No signal';
+  }
+
+  overallQualityColor(): string {
+    const q = this.overallQuality();
+    if (q >= 0.7) return 'var(--color-success)';
+    if (q >= 0.4) return 'var(--color-warning)';
+    return 'var(--color-error)';
+  }
+
+  overallQualityBg(): string {
+    const q = this.overallQuality();
+    if (q >= 0.7) return 'rgba(34,197,94,0.12)';
+    if (q >= 0.4) return 'rgba(245,158,11,0.12)';
+    return 'rgba(239,68,68,0.12)';
   }
 }

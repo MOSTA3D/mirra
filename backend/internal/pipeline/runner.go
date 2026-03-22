@@ -34,9 +34,10 @@ func NewRunner(stores store.Stores, llmProvider llm.Provider) *Runner {
 
 // ProcessResult holds the pipeline output.
 type ProcessResult struct {
-	Profile    *PersonaProfile
-	Markdown   string
-	Confidence map[string]float64
+	Profile     *PersonaProfile
+	Markdown    string
+	Confidence  map[string]float64
+	Suggestions []string
 }
 
 // Run processes all sources for a persona and updates its status.
@@ -84,6 +85,7 @@ func (r *Runner) Run(ctx context.Context, personaID string, personaName string, 
 
 	persona.Status = "ready"
 	persona.Confidence = result.Confidence
+	persona.Suggestions = result.Suggestions
 	persona.CachedMarkdown = result.Markdown
 	persona.UpdatedAt = time.Now().UTC()
 	r.stores.Personas.Update(ctx, persona)
@@ -168,9 +170,10 @@ func (r *Runner) runPipeline(ctx context.Context, job *store.Job, personaName st
 	markdown := r.exporter.ToMarkdown(profile)
 
 	return &ProcessResult{
-		Profile:    profile,
-		Markdown:   markdown,
-		Confidence: confidence,
+		Profile:     profile,
+		Markdown:    markdown,
+		Confidence:  confidence,
+		Suggestions: signals.Diagnostics.SuggestedActions,
 	}, nil
 }
 
