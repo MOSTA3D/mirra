@@ -54,3 +54,15 @@ func (s *UserStore) GetByEmail(ctx context.Context, email string) (*store.User, 
 	}
 	return user, nil
 }
+
+func (s *UserStore) Update(ctx context.Context, user *store.User) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.byID[user.ID]; !ok {
+		return store.ErrNotFound
+	}
+	s.byID[user.ID] = user
+	s.byEmail[user.Email] = user
+	return nil
+}

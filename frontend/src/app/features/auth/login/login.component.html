@@ -25,13 +25,20 @@
           [control]="form.get('email')"
         />
 
-        <app-input
-          formControlName="password"
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          [control]="form.get('password')"
-        />
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-sm font-medium" style="color: var(--color-text-secondary)">Password</label>
+            <a routerLink="/auth/forgot-password" class="text-xs" style="color: var(--color-accent-solid)">
+              Forgot password?
+            </a>
+          </div>
+          <app-input
+            formControlName="password"
+            type="password"
+            placeholder="••••••••"
+            [control]="form.get('password')"
+          />
+        </div>
 
         <app-button type="submit" [loading]="loading()" [fullWidth]="true" class="mt-1">
           Sign in

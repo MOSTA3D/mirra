@@ -19,10 +19,11 @@ type Handler struct {
 	cfg          *config.Config
 	users        store.UserStore
 	verification *verification.Store
+	reset        *verification.ResetStore
 }
 
-func NewHandler(cfg *config.Config, users store.UserStore, vs *verification.Store) *Handler {
-	return &Handler{cfg: cfg, users: users, verification: vs}
+func NewHandler(cfg *config.Config, users store.UserStore, vs *verification.Store, rs *verification.ResetStore) *Handler {
+	return &Handler{cfg: cfg, users: users, verification: vs, reset: rs}
 }
 
 type registerRequest struct {
@@ -181,6 +182,116 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	response.Err(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Refresh endpoint coming soon")
+}
+
+// ForgotPassword sends a password reset code to the given email.
+// Always returns 200 even if email not found — prevents user enumeration.
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email is required")
+		return
+	}
+
+	// Check if user exists (silently — don't leak)
+	if _, err := h.users.GetByEmail(r.Context(), req.Email); err == nil {
+		// Only send code if account exists
+		h.reset.Issue(r.Context(), req.Email)
+	}
+
+	// Always return success to prevent user enumeration
+	response.JSON(w, http.StatusOK, map[string]string{
+		"message": "If an account exists for this email, a reset code has been sent.",
+	})
+}
+
+// VerifyResetCode validates the code without changing the password yet.
+func (h *Handler) VerifyResetCode(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Err(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body")
+		return
+	}
+	if req.Email == "" || req.Code == "" {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email and code are required")
+		return
+	}
+
+	if err := h.reset.Verify(r.Context(), req.Email, req.Code); err != nil {
+		var ve *verification.VerificationError
+		if errors.As(err, &ve) {
+			response.Err(w, http.StatusBadRequest, ve.Code, ve.Message)
+			return
+		}
+		response.Err(w, http.StatusBadRequest, "INVALID_CODE", "Invalid or expired code")
+		return
+	}
+
+	response.JSON(w, http.StatusOK, map[string]string{"message": "Code verified"})
+}
+
+// ResetPassword sets a new password after verifying the reset code.
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email    string `json:"email"`
+		Code     string `json:"code"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Err(w, http.StatusBadRequest, "INVALID_BODY", "Invalid request body")
+		return
+	}
+	if req.Email == "" || req.Code == "" || req.Password == "" {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Email, code and password are required")
+		return
+	}
+	if len(req.Password) < 8 {
+		response.Err(w, http.StatusBadRequest, "VALIDATION_ERROR", "Password must be at least 8 characters")
+		return
+	}
+
+	// Verify code
+	if err := h.reset.Verify(r.Context(), req.Email, req.Code); err != nil {
+		var ve *verification.VerificationError
+		if errors.As(err, &ve) {
+			response.Err(w, http.StatusBadRequest, ve.Code, ve.Message)
+			return
+		}
+		response.Err(w, http.StatusBadRequest, "INVALID_CODE", "Invalid or expired code")
+		return
+	}
+
+	// Get user
+	user, err := h.users.GetByEmail(r.Context(), req.Email)
+	if err != nil {
+		response.Err(w, http.StatusBadRequest, "INVALID_CODE", "Invalid or expired code")
+		return
+	}
+
+	// Hash new password
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to process password")
+		return
+	}
+
+	user.PasswordHash = string(hash)
+	user.UpdatedAt = time.Now().UTC()
+
+	if err := h.users.Update(r.Context(), user); err != nil {
+		response.Err(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update password")
+		return
+	}
+
+	// Consume the reset code so it can't be reused
+	h.reset.Consume(req.Email)
+
+	response.JSON(w, http.StatusOK, map[string]string{"message": "Password updated successfully"})
 }
 
 func (h *Handler) generateTokens(userID string) (*tokenResponse, error) {

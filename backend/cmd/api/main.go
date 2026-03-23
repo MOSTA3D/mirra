@@ -30,7 +30,8 @@ func main() {
 	llmProvider := buildLLM(cfg)
 	runner := pipeline.NewRunner(stores, llmProvider)
 	vs := verification.NewStore()
-	router := buildRouter(cfg, stores, runner, vs)
+	rs := verification.NewResetStore()
+	router := buildRouter(cfg, stores, runner, vs, rs)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -84,9 +85,9 @@ func buildLLM(cfg *config.Config) llm.Provider {
 	return nil
 }
 
-func buildRouter(cfg *config.Config, stores store.Stores, runner *pipeline.Runner, vs *verification.Store) http.Handler {
+func buildRouter(cfg *config.Config, stores store.Stores, runner *pipeline.Runner, vs *verification.Store, rs *verification.ResetStore) http.Handler {
 	handlers := middleware.Handlers{
-		Auth:    auth.NewHandler(cfg, stores.Users, vs),
+		Auth:    auth.NewHandler(cfg, stores.Users, vs, rs),
 		Persona: persona.NewHandler(cfg, stores.Personas, runner),
 		Jobs:    jobs.NewHandler(cfg, stores.Jobs),
 	}

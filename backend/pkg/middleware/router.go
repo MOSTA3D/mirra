@@ -22,6 +22,9 @@ type AuthRoutes interface {
 	Refresh(w http.ResponseWriter, r *http.Request)
 	SendVerificationCode(w http.ResponseWriter, r *http.Request)
 	VerifyCode(w http.ResponseWriter, r *http.Request)
+	ForgotPassword(w http.ResponseWriter, r *http.Request)
+	VerifyResetCode(w http.ResponseWriter, r *http.Request)
+	ResetPassword(w http.ResponseWriter, r *http.Request)
 }
 
 type PersonaRoutes interface {
@@ -68,6 +71,9 @@ func NewRouter(cfg *config.Config, h Handlers) http.Handler {
 			r.Post("/refresh", h.Auth.Refresh)
 			r.Post("/send-code", h.Auth.SendVerificationCode)
 			r.Post("/verify-code", h.Auth.VerifyCode)
+			r.Post("/forgot-password", h.Auth.ForgotPassword)
+			r.Post("/verify-reset-code", h.Auth.VerifyResetCode)
+			r.Post("/reset-password", h.Auth.ResetPassword)
 		})
 
 		// Protected routes

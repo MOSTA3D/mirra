@@ -45,6 +45,24 @@ export class AuthService {
     );
   }
 
+  forgotPassword(email: string) {
+    return this.http.post<{ data: { message: string } }>(
+      `${environment.apiUrl}/auth/forgot-password`, { email }
+    );
+  }
+
+  verifyResetCode(email: string, code: string) {
+    return this.http.post<{ data: { message: string } }>(
+      `${environment.apiUrl}/auth/verify-reset-code`, { email, code }
+    );
+  }
+
+  resetPassword(email: string, code: string, password: string) {
+    return this.http.post<{ data: { message: string } }>(
+      `${environment.apiUrl}/auth/reset-password`, { email, code, password }
+    );
+  }
+
   logout() {
     this._token.set(null);
     localStorage.removeItem(this.TOKEN_KEY);
